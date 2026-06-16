@@ -1,0 +1,87 @@
+# Taskfile.yml
+version: "3"
+
+tasks:
+
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  oco:secret-admin:
+    desc: Create or update the Grafana admin Secret from GRAFANA_ADMIN_PASSWORD
+    cmds:
+      - >
+        kubectl -n observability-console create secret generic grafana-admin
+        --from-literal=admin-password="${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD}"
+        --dry-run=client -o yaml | kubectl apply -f -
+
+  oco:deploy:
+    desc: Deploy the observability console
+    cmds:
+      - kubectl apply -k k8s
+
+  oco:delete:
+    desc: Delete the observability console
+    cmds:
+      - kubectl delete -k k8s
+
+  oco:status:
+    desc: Show console status
+    cmds:
+      - kubectl -n observability-console get pods,svc,configmap,sa
+
+  oco:events:
+    desc: Show console namespace events
+    cmds:
+      - kubectl -n observability-console get events --sort-by=.lastTimestamp
+
+  oco:logs-grafana:
+    desc: Follow Grafana logs
+    cmds:
+      - kubectl -n observability-console logs deploy/grafana -c grafana -f
+
+  oco:logs-datasources:
+    desc: Follow the datasource sidecar logs
+    cmds:
+      - kubectl -n observability-console logs deploy/grafana -c sidecar-datasources -f
+
+  oco:logs-dashboards:
+    desc: Follow the dashboard sidecar logs
+    cmds:
+      - kubectl -n observability-console logs deploy/grafana -c sidecar-dashboards -f
+
+  oco:restart:
+    desc: Restart Grafana
+    cmds:
+      - kubectl -n observability-console rollout restart deploy/grafana
+
+  oco:watched-namespaces:
+    desc: Print the watched-namespace set (the onboarding coupling point)
+    cmds:
+      - >
+        kubectl -n observability-console get deploy grafana
+        -o jsonpath='{.spec.template.spec.containers[?(@.name=="sidecar-dashboards")].env[?(@.name=="NAMESPACE")].value}{"\n"}'
+
+  oco:loaded-datasources:
+    desc: List datasource definitions currently loaded (Observed State)
+    cmds:
+      - kubectl -n observability-console exec deploy/grafana -c grafana -- ls -1 /etc/grafana/provisioning/datasources
+
+  oco:loaded-dashboards:
+    desc: List dashboard definitions currently loaded (Observed State)
+    cmds:
+      - kubectl -n observability-console exec deploy/grafana -c grafana -- ls -1 /var/lib/grafana/dashboards
+
+  oco:consumers:
+    desc: Audit Spine — list RoleBindings that grant the console ServiceAccount read (requires jq)
+    cmds:
+      - >
+        kubectl get rolebindings -A -o json | jq -r '.items[]
+        | select(.subjects[]? | (.kind=="ServiceAccount" and .name=="observability-console" and .namespace=="observability-console"))
+        | "\(.metadata.namespace)/\(.metadata.name)"'
+
+  oco:url:
+    desc: Print the Grafana NodePort service
+    cmds:
+      - kubectl -n observability-console get svc grafana -o wide
