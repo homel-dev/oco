@@ -1,0 +1,31 @@
+# examples/consumer-llm-runtime/configmap-dashboard.yml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llm-runtime-dashboard
+  namespace: llm-runtime
+  labels:
+    grafana_dashboard: "1"
+data:
+  llm-runtime-overview.json: |
+    {
+      "title": "llm-runtime — overview",
+      "uid": "llm-runtime-overview",
+      "schemaVersion": 39,
+      "version": 1,
+      "time": { "from": "now-6h", "to": "now" },
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "vLLM e2e request latency (p95)",
+          "datasource": { "type": "prometheus", "uid": "llm-runtime-prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket[5m])))"
+            }
+          ]
+        }
+      ]
+    }
