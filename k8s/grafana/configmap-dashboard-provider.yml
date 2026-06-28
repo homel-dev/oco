@@ -1,0 +1,21 @@
+# k8s/grafana/configmap-dashboard-provider.yml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provider
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/component: dashboard-provider
+data:
+  dashboards.yml: |
+    apiVersion: 1
+    providers:
+      - name: consumer-dashboards
+        orgId: 1
+        folder: Consumer Dashboards
+        type: file
+        disableDeletion: false
+        allowUiUpdates: false
+        updateIntervalSeconds: 10
+        options:
+          path: /var/lib/grafana/dashboards
