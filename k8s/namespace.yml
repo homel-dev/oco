@@ -1,0 +1,8 @@
+# k8s/namespace.yml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability-console
+  labels:
+    app.kubernetes.io/name: observability-console
+    app.kubernetes.io/part-of: homel-observability
