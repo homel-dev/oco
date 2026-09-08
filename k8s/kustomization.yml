@@ -9,5 +9,10 @@ resources:
   - serviceaccount.yml
   - grafana/secret.yml
   - grafana/configmap-dashboard-provider.yml
+  - grafana/configmap-frontend.yml
   - grafana/deployment.yml
   - grafana/service.yml
+
+patchesStrategicMerge:
+  - grafana/deployment-artifacts.patch.yml
+  - grafana/service-artifacts.patch.yml
