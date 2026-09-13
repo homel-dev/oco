@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: observability-backend
+
+resources:
+  - ../..
+  - tempo-minio-networkpolicy.yml
+
+patches:
+  - path: tempo-config-patch.yml
+  - path: tempo-deployment-patch.yml

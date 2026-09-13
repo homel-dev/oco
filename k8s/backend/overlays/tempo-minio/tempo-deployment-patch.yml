@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tempo
+spec:
+  template:
+    spec:
+      containers:
+        - name: tempo
+          env:
+            - name: TEMPO_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: tempo-minio
+                  key: access-key
+            - name: TEMPO_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: tempo-minio
+                  key: secret-key

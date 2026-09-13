@@ -1,0 +1,306 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alloy-config
+data:
+  config.alloy: |
+    logging {
+      level = "info"
+    }
+
+    otelcol.receiver.otlp "shared" {
+      grpc {
+        endpoint = "0.0.0.0:4317"
+      }
+      http {
+        endpoint = "0.0.0.0:4318"
+      }
+      output {
+        metrics = [otelcol.processor.transform.identity.input]
+        logs    = [otelcol.processor.transform.identity.input]
+        traces  = [otelcol.processor.transform.identity.input]
+      }
+    }
+
+    otelcol.processor.transform "identity" {
+      error_mode = "ignore"
+
+      metric_statements {
+        context = "datapoint"
+        statements = [
+          `set(attributes["project"], resource.attributes["project"]) where resource.attributes["project"] != nil`,
+          `set(attributes["service.name"], resource.attributes["service.name"]) where resource.attributes["service.name"] != nil`,
+          `set(attributes["k8s.namespace.name"], resource.attributes["k8s.namespace.name"]) where resource.attributes["k8s.namespace.name"] != nil`,
+          `set(attributes["deployment.environment.name"], resource.attributes["deployment.environment.name"]) where resource.attributes["deployment.environment.name"] != nil`,
+        ]
+      }
+
+      output {
+        metrics = [otelcol.processor.batch.shared.input]
+        logs    = [otelcol.processor.batch.shared.input]
+        traces  = [otelcol.processor.batch.shared.input]
+      }
+    }
+
+    otelcol.processor.batch "shared" {
+      timeout = "5s"
+      send_batch_size = 1024
+
+      output {
+        metrics = [otelcol.exporter.prometheus.vm.input]
+        logs    = [otelcol.exporter.otlphttp.victorialogs.input]
+        traces  = [otelcol.exporter.otlp.tempo.input]
+      }
+    }
+
+    otelcol.exporter.prometheus "vm" {
+      forward_to = [prometheus.remote_write.vm.receiver]
+    }
+
+    otelcol.exporter.otlphttp "victorialogs" {
+      client {
+        endpoint = "http://victorialogs:9428/insert/opentelemetry"
+        headers = {
+          "VL-Stream-Fields" = "project,service.name,k8s.namespace.name,deployment.environment.name",
+        }
+      }
+    }
+
+    otelcol.exporter.otlp "tempo" {
+      client {
+        endpoint = "tempo:4317"
+        tls {
+          insecure = true
+        }
+      }
+    }
+
+    prometheus.receive_http "ingress" {
+      http {
+        listen_address = "0.0.0.0"
+        listen_port = 12347
+      }
+      forward_to = [prometheus.remote_write.vm.receiver]
+    }
+
+    prometheus.remote_write "vm" {
+      endpoint {
+        url = "http://victoriametrics:8428/api/v1/write"
+      }
+    }
+
+    loki.source.api "ingress" {
+      http {
+        listen_address = "0.0.0.0"
+        listen_port = 12348
+      }
+      forward_to = [loki.write.victorialogs.receiver]
+    }
+
+    discovery.kubernetes "pods" {
+      role = "pod"
+    }
+
+    discovery.relabel "pod_logs" {
+      targets = discovery.kubernetes.pods.targets
+
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_container_name"]
+        target_label  = "container"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+        target_label  = "service"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_observability_homel_dev_project"]
+        target_label  = "project"
+      }
+
+      rule {
+        source_labels = ["project", "__meta_kubernetes_namespace"]
+        regex         = "^;(.*)$"
+        replacement   = "$1"
+        target_label  = "project"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+        separator     = "/"
+        target_label  = "__path__"
+        replacement   = "/var/log/pods/*_$1/$2/*.log"
+      }
+    }
+
+    local.file_match "pod_logs" {
+      path_targets = discovery.relabel.pod_logs.output
+    }
+
+    loki.source.file "pod_logs" {
+      targets       = local.file_match.pod_logs.targets
+      tail_from_end = true
+      forward_to    = [loki.process.pod_logs.receiver]
+    }
+
+    loki.process "pod_logs" {
+      stage.cri {}
+
+      stage.labels {
+        values = {
+          namespace = "",
+          pod       = "",
+          container = "",
+          service   = "",
+          project   = "",
+        }
+      }
+
+      forward_to = [loki.write.victorialogs.receiver]
+    }
+
+    loki.source.kubernetes_events "events" {
+      job_name   = "kubernetes-events"
+      log_format = "logfmt"
+      forward_to = [loki.process.events.receiver]
+    }
+
+    loki.process "events" {
+      stage.static_labels {
+        values = {
+          project = "kubernetes",
+          service = "kubernetes-events",
+        }
+      }
+      forward_to = [loki.write.victorialogs.receiver]
+    }
+
+    loki.write "victorialogs" {
+      endpoint {
+        url = "http://victorialogs:9428/insert/loki/api/v1/push"
+      }
+    }
+
+    prometheus.scrape "backend_self" {
+      targets = [
+        {"__address__" = "alloy:12345",          "project" = "oco", "service" = "alloy"},
+        {"__address__" = "victoriametrics:8428", "project" = "oco", "service" = "victoriametrics"},
+        {"__address__" = "victorialogs:9428",    "project" = "oco", "service" = "victorialogs"},
+        {"__address__" = "tempo:3200",           "project" = "oco", "service" = "tempo"},
+      ]
+      forward_to = [prometheus.remote_write.vm.receiver]
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alloy
+  labels:
+    app.kubernetes.io/name: alloy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alloy
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: alloy
+    spec:
+      serviceAccountName: alloy
+      containers:
+        - name: alloy
+          image: grafana/alloy:v1.19.2
+          args:
+            - run
+            - /etc/alloy/config.alloy
+            - --server.http.listen-addr=0.0.0.0:12345
+            - --storage.path=/var/lib/alloy
+          ports:
+            - name: http
+              containerPort: 12345
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+            - name: prom-rw
+              containerPort: 12347
+            - name: loki-push
+              containerPort: 12348
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alloy
+              readOnly: true
+            - name: storage
+              mountPath: /var/lib/alloy
+            - name: pod-logs
+              mountPath: /var/log/pods
+              readOnly: true
+            - name: container-logs
+              mountPath: /var/log/containers
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: alloy-config
+        - name: storage
+          emptyDir: {}
+        - name: pod-logs
+          hostPath:
+            path: /var/log/pods
+            type: Directory
+        - name: container-logs
+          hostPath:
+            path: /var/log/containers
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alloy
+spec:
+  selector:
+    app.kubernetes.io/name: alloy
+  ports:
+    - name: http
+      port: 12345
+      targetPort: http
+    - name: otlp-grpc
+      port: 4317
+      targetPort: otlp-grpc
+    - name: otlp-http
+      port: 4318
+      targetPort: otlp-http
+    - name: prometheus-remote-write
+      port: 12347
+      targetPort: prom-rw
+    - name: loki-push
+      port: 12348
+      targetPort: loki-push

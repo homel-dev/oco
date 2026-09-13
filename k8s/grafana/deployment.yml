@@ -39,6 +39,8 @@ spec:
                   key: admin-password
             - name: GF_USERS_ALLOW_SIGN_UP
               value: "false"
+            - name: GF_PLUGINS_PREINSTALL
+              value: victoriametrics-logs-datasource@0.31.0
           readinessProbe:
             httpGet:
               path: /api/health
@@ -83,7 +85,7 @@ spec:
             - name: FOLDER
               value: /etc/grafana/provisioning/datasources
             - name: NAMESPACE
-              value: llm-runtime,host-runtime,rr       # watched-namespace set — append each onboarded consumer
+              value: observability-console,llm-runtime,host-runtime,rr       # watched-namespace set — append each onboarded consumer
           volumeMounts:
             - name: datasources
               mountPath: /etc/grafana/provisioning/datasources
@@ -101,7 +103,7 @@ spec:
             - name: FOLDER
               value: /var/lib/grafana/dashboards
             - name: NAMESPACE
-              value: llm-runtime,host-runtime,rr
+              value: observability-console,llm-runtime,host-runtime,rr
           volumeMounts:
             - name: dashboards
               mountPath: /var/lib/grafana/dashboards

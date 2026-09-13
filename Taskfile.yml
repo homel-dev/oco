@@ -86,3 +86,40 @@ tasks:
     desc: Print the Grafana NodePort service
     cmds:
       - kubectl -n observability-console get svc grafana -o wide
+
+backend:up:
+  desc: Deploy the shared observability backend
+  cmds:
+    - kubectl apply -k k8s/backend
+
+backend:down:
+  desc: Delete backend workloads and manifests
+  cmds:
+    - kubectl delete -k k8s/backend
+
+backend:status:
+  desc: Show backend status
+  cmds:
+    - kubectl -n observability-backend get pods,svc,pvc,configmap,sa,networkpolicy
+
+backend:smoke:
+  desc: Validate metric, log, and trace signal paths through Alloy
+  cmds:
+    - scripts/backend-smoke.sh
+
+backend:baseline:
+  desc: Record backend resource and storage baseline
+  cmds:
+    - scripts/backend-baseline.sh
+
+platform:up:
+  desc: Deploy backend and console
+  cmds:
+    - kubectl apply -k k8s/backend
+    - kubectl apply -k k8s
+
+platform:status:
+  desc: Show backend and console status
+  cmds:
+    - kubectl -n observability-backend get pods,svc,pvc
+    - kubectl -n observability-console get pods,svc,configmap,sa

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability-backend
+  labels:
+    app.kubernetes.io/name: observability-backend
+    app.kubernetes.io/part-of: homel-observability

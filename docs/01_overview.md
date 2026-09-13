@@ -2,6 +2,13 @@
 
 ## Architecture Overview
 
+> **Status: SUPERSEDED.** This document records the original presentation-only
+> architecture. [Document 02](02_shared_observability_platform.md) is the
+> current canonical architecture. The previous prohibition on OCO-owned stores
+> and collectors no longer applies. Content below this notice is retained as
+> architectural decision history and MUST NOT be treated as current scope.
+
+
 ### Foundational Engineering Specification (Document 01 of 01)
 
 *Namespace: observability-console • Owner: platform*

@@ -1,109 +1,171 @@
+# OCO
 
-# OBSERVABILITY CONSOLE
-## Shared Telemetry Presentation Layer for Homel Projects
-### Repository Entry Point
-*Namespace: observability-console • Owner: platform*
+## Shared Observability Platform for Homel Projects
 
----
+OCO owns the shared observability platform for Homel projects.
 
-## Navigation
-**[Next: Document 01 (Architecture Overview)](docs/01_overview.md) →**
+It intentionally separates the presentation plane from the telemetry data plane:
 
-- [0. Status, Scope, and Authority](#0-status-scope-and-authority)
-- [1. Purpose](#1-purpose)
-- [2. Scope](#2-scope)
-- [3. Served Projects](#3-served-projects)
-- [4. Documentation](#4-documentation)
-- [5. Closing Statement](#5-closing-statement)
+```text
+observability-console
+└── Grafana
 
----
+observability-backend
+├── Grafana Alloy
+├── VictoriaMetrics
+├── VictoriaLogs
+└── Grafana Tempo
+```
 
-## 0. Status, Scope, and Authority
+The repository owns both namespaces. The namespaces do not share lifecycle.
 
-**Status:** FOUNDATIONAL
-**Audience:** Platform contributors, infrastructure contributors, consumer-project maintainers
-**Change policy:**
-- Append-only
-- No silent edits
+> **Hard invariant:** loss or deletion of `observability-console` MUST NOT stop
+> telemetry ingestion or destroy telemetry retained by `observability-backend`.
 
-This repository provides the shared telemetry **presentation** layer for Homel projects. It owns how telemetry is viewed. It does not own telemetry collection, storage, or meaning.
+## Architecture
 
-Project identity: **OCO** — *"oko"*, the eye. All machine-facing identifiers (repository, namespace, DNS, labels) use `observability-console`.
+```mermaid
+flowchart LR
+    RR["Relentless Rekrow"]
+    LLM["llm-runtime"]
+    MS["Memory Steward"]
+    HR["host-runtime"]
 
-[Back to top](#navigation)
+    subgraph OCO["OCO"]
+        subgraph CONSOLE["observability-console"]
+            G["Grafana"]
+        end
 
----
+        subgraph BACKEND["observability-backend"]
+            A["Grafana Alloy"]
+            VM["VictoriaMetrics"]
+            VL["VictoriaLogs"]
+            T["Tempo"]
+        end
+    end
 
-## 1. Purpose
+    RR --> A
+    LLM --> A
+    MS --> A
+    HR --> A
 
-Multiple Homel projects emit telemetry. Without a shared presentation layer, each project tends to stand up its own viewer stack, duplicating the viewer while telemetry stays project-local.
+    A --> VM
+    A --> VL
+    A --> T
 
-This repository provides one presentation surface — dashboards now, alert and trace surfaces possible later — that reads from telemetry sources owned and operated by independent projects.
+    G --> VM
+    G --> VL
+    G --> T
 
-The viewer is shared. Collection, storage, and meaning remain with each project.
+    T -. "S3 / dedicated bucket" .-> M["host-runtime MinIO"]
+```
 
-[Back to top](#navigation)
+## Ownership boundary
 
----
+OCO owns:
 
-## 2. Scope
+- shared telemetry ingress and routing;
+- common telemetry identity conventions;
+- VictoriaMetrics, VictoriaLogs, and Tempo deployment;
+- retention and storage conventions;
+- shared Grafana datasources;
+- backend NetworkPolicy;
+- Grafana presentation/provisioning machinery.
 
-### 2.1 This Repository Owns
-- the presentation surface (initially Grafana)
-- the provisioning mechanism that loads consumer-published definitions
-- the access contract by which consumers grant namespaced read
-- the presentation ServiceAccount identity
-- presentation availability and recovery
+Consumer projects own:
 
-### 2.2 This Repository Does Not Own
-- metric stores
-- log stores
-- collectors and exporters
-- instrumentation
-- telemetry retention and lifecycle
+- instrumentation;
+- telemetry semantics;
+- project-specific dashboards and alerts;
+- project-specific correlation attributes;
+- exceptional application-owned datasources.
 
-> **Hard Invariant:** This repository MUST NOT host a metric store, log store, or collector. Removing this project MUST cost the ability to *view* telemetry — never the telemetry itself.
+The common identity vocabulary is:
 
-Full architecture: see [Document 01 (Architecture Overview)](docs/01_overview.md).
+- `project`
+- `service.name`
+- `k8s.namespace.name`
+- `deployment.environment.name`
 
-[Back to top](#navigation)
+Correlation identifiers such as `run_id`, trace IDs, request IDs, and planning
+cycle IDs remain signal attributes. They MUST NOT be promoted indiscriminately
+to global metric labels.
 
----
+## Standard backends
 
-## 3. Served Projects
+| Signal | Shared backend | Working storage |
+|---|---|---|
+| Metrics | VictoriaMetrics Single Node | PVC/filesystem |
+| Logs | VictoriaLogs Single Node | PVC/filesystem |
+| Traces | Tempo monolithic | PVC in base deployment; MinIO overlay available |
+| Ingress/processing | Grafana Alloy | ephemeral local state |
 
-A project is served only once it ships the consumption contract from its own namespace: labeled definition ConfigMaps, a Role granting namespaced read, and a RoleBinding to the console ServiceAccount. Intent is not consumption.
+VictoriaMetrics and VictoriaLogs are deliberately single-node. OCO does not
+deploy their cluster modes in the current single-node Minikube environment.
 
-| Project | Namespace | Status |
-|:--|:--|:-:|
-| llm-runtime | `llm-runtime` | Migrating |
-| Memory Steward | _to be defined_ | Planned |
-| Relentless Rekrow | _to be defined_ | Planned |
-| Intent Steward | _to be defined_ | Planned |
-| The Dean | _to be defined_ | Planned |
+Tempo remains the trace backend. The base deployment can start without
+host-runtime MinIO; `k8s/backend/overlays/tempo-minio` switches trace block
+storage to the dedicated `observability-tempo` bucket once credentials exist.
 
-**Status values:** `Consumer` (contract shipped) • `Migrating` (onboarding in progress) • `Planned` (intended, not onboarded).
+## Grafana datasources
 
-> **Warning:** This table is a convenience and MAY drift from reality. The authoritative record of served projects is the set of RoleBindings naming the console ServiceAccount.
+Grafana provisions shared standard datasources:
 
-[Back to top](#navigation)
+- `victoriametrics`
+- `victorialogs`
+- `tempo`
 
----
+Standard telemetry is separated by metadata, not by deploying one standard
+datasource/backend per project.
 
-## 4. Documentation
+Project-specific application data may remain a dedicated datasource when that
+data belongs to the application itself.
 
-- [docs/01_overview.md](docs/01_overview.md) — foundational architecture specification
+## Deployment
 
-Additional specifications MUST follow the documentation style guide and the `dd_topic_slug.md` naming convention.
+Existing console deployment remains available:
 
-[Back to top](#navigation)
+```bash
+task up
+```
 
----
+Deploy the backend:
 
-## 5. Closing Statement
+```bash
+task backend:up
+```
 
-This repository formalizes a shared telemetry presentation layer. The presentation surface is shared; telemetry collection, storage, content, and meaning remain owned by independent projects. A reviewer MUST be able to remove this repository and lose visibility, never data.
+Deploy both:
 
----
+```bash
+task platform:up
+```
 
-**END OF DOCUMENT**
+Validate actual signal paths:
+
+```bash
+task backend:smoke
+task backend:baseline
+```
+
+`Running` Pods are not completion criteria. The smoke test validates:
+
+```text
+OTLP producer -> Alloy -> VictoriaMetrics -> query
+OTLP producer -> Alloy -> VictoriaLogs    -> query
+OTLP producer -> Alloy -> Tempo           -> query
+```
+
+## Migration
+
+Consumers migrate one at a time. A working project-local backend is removed
+only after telemetry parity through OCO has been demonstrated.
+
+Do not simultaneously migrate every project.
+
+## Documentation
+
+- [docs/01_overview.md](docs/01_overview.md) — historical presentation-only architecture; explicitly superseded
+- [docs/02_shared_observability_platform.md](docs/02_shared_observability_platform.md) — current platform architecture
+- [docs/03_backend_operations.md](docs/03_backend_operations.md) — deployment and validation
+- [docs/04_consumer_migration.md](docs/04_consumer_migration.md) — per-project migration contract

@@ -9,5 +9,6 @@ resources:
   - serviceaccount.yml
   - grafana/secret.yml
   - grafana/configmap-dashboard-provider.yml
+  - grafana/configmap-shared-datasources.yml
   - grafana/deployment.yml
   - grafana/service.yml
