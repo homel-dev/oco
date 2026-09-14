@@ -31,7 +31,8 @@ spec:
           args:
             - -storageDataPath=/storage
             - -retentionPeriod=14d
-            - -storage.maxDiskSpaceUsageBytes=30GiB
+            - -retention.maxDiskSpaceUsageBytes=30GiB
+            - -storage.minFreeDiskSpaceBytes=5GiB
             - -httpListenAddr=:9428
           ports:
             - name: http

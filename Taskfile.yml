@@ -87,39 +87,55 @@ tasks:
     cmds:
       - kubectl -n observability-console get svc grafana -o wide
 
-backend:up:
-  desc: Deploy the shared observability backend
-  cmds:
-    - kubectl apply -k k8s/backend
+  backend:up:
+    desc: Deploy the shared observability backend
+    cmds:
+      - kubectl apply -k k8s/backend
 
-backend:down:
-  desc: Delete backend workloads and manifests
-  cmds:
-    - kubectl delete -k k8s/backend
+  backend:down:
+    desc: Delete backend workloads and manifests
+    cmds:
+      - kubectl delete -k k8s/backend
 
-backend:status:
-  desc: Show backend status
-  cmds:
-    - kubectl -n observability-backend get pods,svc,pvc,configmap,sa,networkpolicy
+  backend:status:
+    desc: Show backend status
+    cmds:
+      - kubectl -n observability-backend get pods,svc,pvc,configmap,sa,networkpolicy
 
-backend:smoke:
-  desc: Validate metric, log, and trace signal paths through Alloy
-  cmds:
-    - scripts/backend-smoke.sh
+  backend:smoke:
+    desc: Validate metric, log, and trace signal paths through Alloy
+    cmds:
+      - scripts/backend-smoke.sh
 
-backend:baseline:
-  desc: Record backend resource and storage baseline
-  cmds:
-    - scripts/backend-baseline.sh
+  backend:baseline:
+    desc: Record backend resource and storage baseline
+    cmds:
+      - scripts/backend-baseline.sh
 
-platform:up:
-  desc: Deploy backend and console
-  cmds:
-    - kubectl apply -k k8s/backend
-    - kubectl apply -k k8s
+  platform:up:
+    desc: Deploy backend and console
+    cmds:
+      - kubectl apply -k k8s/backend
+      - kubectl apply -k k8s
 
-platform:status:
-  desc: Show backend and console status
-  cmds:
-    - kubectl -n observability-backend get pods,svc,pvc
-    - kubectl -n observability-console get pods,svc,configmap,sa
+  platform:status:
+    desc: Show backend and console status
+    cmds:
+      - kubectl -n observability-backend get pods,svc,pvc
+      - kubectl -n observability-console get pods,svc,configmap,sa
+
+  ci:validate:
+    desc: Render and validate OCO Kubernetes manifests locally
+    cmds:
+      - rm -rf .ci/rendered
+      - mkdir -p .ci/rendered
+      - kubectl kustomize k8s > .ci/rendered/console.yaml
+      - kubectl kustomize k8s/backend > .ci/rendered/backend.yaml
+      - kubectl kustomize k8s/backend/overlays/tempo-minio > .ci/rendered/backend-minio.yaml
+      - python3 scripts/ci/validate_oco.py --rendered-dir .ci/rendered
+      - >
+        for manifest in .ci/rendered/*.yaml; do
+          docker run --rm -v "$PWD:/work" -w /work
+          ghcr.io/yannh/kubeconform:v0.8.0@sha256:faffaf43f95aa6425306e1ab8d6fcad72acb9049158f38e574c085ea1ec0f64e
+          -strict -summary -kubernetes-version 1.37.0 "/work/$manifest";
+        done
