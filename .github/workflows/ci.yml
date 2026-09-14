@@ -13,9 +13,9 @@ permissions:
 jobs:
   organization-standards:
     name: Organization standards
-    uses: homel-dev/.github/.github/workflows/repository-ci.yml@main
+    uses: homel-dev/.github/.github/workflows/repository-ci.yml@047391f1ac3e79ce2a9c1c74ebb1f4dfc261d8c6
     with:
-      standards_ref: main
+      standards_ref: 047391f1ac3e79ce2a9c1c74ebb1f4dfc261d8c6
       enforce_numbered_docs: true
 
   oco-manifests:
@@ -40,8 +40,8 @@ jobs:
       - name: Install kubectl v1.37.0
         shell: bash
         run: |
-          curl -fsSLo kubectl             https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kubectl
-          curl -fsSLo kubectl.sha256             https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kubectl.sha256
+          curl -fsSLo kubectl https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kubectl
+          curl -fsSLo kubectl.sha256 https://dl.k8s.io/release/v1.37.0/bin/linux/amd64/kubectl.sha256
           echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check -
           sudo install -m 0755 kubectl /usr/local/bin/kubectl
           kubectl version --client
@@ -52,7 +52,7 @@ jobs:
           mkdir -p .ci/rendered
           kubectl kustomize k8s > .ci/rendered/console.yaml
           kubectl kustomize k8s/backend > .ci/rendered/backend.yaml
-          kubectl kustomize k8s/backend/overlays/tempo-minio             > .ci/rendered/backend-minio.yaml
+          kubectl kustomize k8s/backend/overlays/tempo-minio > .ci/rendered/backend-minio.yaml
 
       - name: Validate OCO invariants
         run: python scripts/ci/validate_oco.py --rendered-dir .ci/rendered
@@ -62,5 +62,12 @@ jobs:
         run: |
           image='ghcr.io/yannh/kubeconform:v0.8.0@sha256:faffaf43f95aa6425306e1ab8d6fcad72acb9049158f38e574c085ea1ec0f64e'
           for manifest in .ci/rendered/*.yaml; do
-            docker run --rm               -v "$PWD:/work"               -w /work               "${image}"               -strict               -summary               -kubernetes-version 1.37.0               "/work/${manifest}"
+            docker run --rm \
+              -v "$PWD:/work" \
+              -w /work \
+              "${image}" \
+              -strict \
+              -summary \
+              -kubernetes-version 1.37.0 \
+              "/work/${manifest}"
           done

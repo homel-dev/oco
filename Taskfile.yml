@@ -93,7 +93,10 @@ tasks:
       - kubectl apply -k k8s/backend
 
   backend:down:
-    desc: Delete backend workloads and manifests
+    desc: Delete the backend namespace and PVC-backed retained data (destructive)
+    preconditions:
+      - sh: test "${OCO_CONFIRM_DELETE_BACKEND:-}" = "YES"
+        msg: Set OCO_CONFIRM_DELETE_BACKEND=YES to confirm destructive backend deletion.
     cmds:
       - kubectl delete -k k8s/backend
 

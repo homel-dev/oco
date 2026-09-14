@@ -1,5 +1,7 @@
 # OCO
 
+[![CI](https://github.com/homel-dev/oco/actions/workflows/ci.yml/badge.svg)](https://github.com/homel-dev/oco/actions/workflows/ci.yml)
+
 ## Shared Observability Platform for Homel Projects
 
 OCO owns the shared observability platform for Homel projects.
@@ -141,7 +143,13 @@ Deploy both:
 task platform:up
 ```
 
-Validate actual signal paths:
+Run static repository and manifest validation before deployment:
+
+```bash
+task ci:validate
+```
+
+Validate actual signal paths against the running cluster:
 
 ```bash
 task backend:smoke
@@ -169,3 +177,10 @@ Do not simultaneously migrate every project.
 - [docs/02_shared_observability_platform.md](docs/02_shared_observability_platform.md) — current platform architecture
 - [docs/03_backend_operations.md](docs/03_backend_operations.md) — deployment and validation
 - [docs/04_consumer_migration.md](docs/04_consumer_migration.md) — per-project migration contract
+- [docs/05_ci.md](docs/05_ci.md) — CI architecture and validation contract
+
+Organization-wide policy:
+
+- [Engineering Style Guide](https://github.com/homel-dev/.github/blob/main/docs/01_engineering_style_guide.md)
+- [Documentation Style Guide](https://github.com/homel-dev/.github/blob/main/docs/02_documentation_style_guide.md)
+- [Repository Conventions](https://github.com/homel-dev/.github/blob/main/docs/03_repository_conventions.md)

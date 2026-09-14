@@ -42,7 +42,19 @@ kubectl apply -k k8s/backend/overlays/tempo-minio
 
 `secret.example.yml` documents only the Secret schema.
 
-## Validation
+## Static validation
+
+Before deployment, render and validate repository manifests:
+
+```bash
+task ci:validate
+```
+
+Static validation checks repository policy, Kustomize rendering, Kubernetes
+schemas, and OCO-specific topology invariants. It does not establish runtime
+health.
+
+## Runtime validation
 
 A backend is not healthy merely because its Pods are `Running`.
 
@@ -77,3 +89,18 @@ The baseline records:
 
 Use that result as the pre-migration baseline for comparing the cost removed
 when project-local Prometheus/Loki/Tempo stacks are deleted.
+
+
+## Destructive backend removal
+
+`task backend:down` deletes the backend Kustomization, including the
+`observability-backend` namespace and PVC-backed retained data.
+
+It is intentionally guarded:
+
+```bash
+OCO_CONFIRM_DELETE_BACKEND=YES task backend:down
+```
+
+Do not use this command as the normal way to stop or restart the presentation
+console. Console lifecycle is independent from backend retention.

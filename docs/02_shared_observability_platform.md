@@ -114,14 +114,15 @@ Kubernetes Events are also collected into VictoriaLogs.
 - PVC: `victoriametrics-data`
 - requested capacity: 50 GiB
 - retention: 30 days
-- max storage usage: 40 GiB
+- free-space floor: 10 GiB (`-storage.minFreeDiskSpaceBytes=10GiB`)
 
 ### VictoriaLogs
 
 - PVC: `victorialogs-data`
 - requested capacity: 40 GiB
 - retention: 14 days
-- max storage usage: 30 GiB
+- retention disk cap: 30 GiB (`-retention.maxDiskSpaceUsageBytes=30GiB`)
+- free-space floor: 5 GiB (`-storage.minFreeDiskSpaceBytes=5GiB`)
 
 ### Tempo
 
