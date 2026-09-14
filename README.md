@@ -106,7 +106,7 @@ VictoriaMetrics and VictoriaLogs are deliberately single-node. OCO does not
 deploy their cluster modes in the current single-node Minikube environment.
 
 Tempo remains the trace backend. The base deployment can start without
-host-runtime MinIO; `k8s/backend/overlays/tempo-minio` switches trace block
+host-runtime MinIO; `k8s/overlays/tempo-minio` switches trace block
 storage to the dedicated `observability-tempo` bucket once credentials exist.
 
 ## Grafana datasources

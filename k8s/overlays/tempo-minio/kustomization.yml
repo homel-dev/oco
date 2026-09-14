@@ -4,7 +4,7 @@ kind: Kustomization
 namespace: observability-backend
 
 resources:
-  - ../..
+  - ../../backend
   - tempo-minio-networkpolicy.yml
 
 patches:

@@ -37,7 +37,7 @@ kubectl -n observability-backend create secret generic tempo-minio \
 Then apply:
 
 ```bash
-kubectl apply -k k8s/backend/overlays/tempo-minio
+kubectl apply -k k8s/overlays/tempo-minio
 ```
 
 `secret.example.yml` documents only the Secret schema.
@@ -89,7 +89,6 @@ The baseline records:
 
 Use that result as the pre-migration baseline for comparing the cost removed
 when project-local Prometheus/Loki/Tempo stacks are deleted.
-
 
 ## Destructive backend removal
 

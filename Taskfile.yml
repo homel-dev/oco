@@ -134,7 +134,7 @@ tasks:
       - mkdir -p .ci/rendered
       - kubectl kustomize k8s > .ci/rendered/console.yaml
       - kubectl kustomize k8s/backend > .ci/rendered/backend.yaml
-      - kubectl kustomize k8s/backend/overlays/tempo-minio > .ci/rendered/backend-minio.yaml
+      - kubectl kustomize k8s/overlays/tempo-minio > .ci/rendered/backend-minio.yaml
       - python3 scripts/ci/validate_oco.py --rendered-dir .ci/rendered
       - >
         for manifest in .ci/rendered/*.yaml; do
