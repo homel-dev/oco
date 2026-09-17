@@ -104,6 +104,14 @@ data:
     discovery.relabel "pod_logs" {
       targets = discovery.kubernetes.pods.targets
 
+      # Namespaces migrated to a local Alloy collector are forwarded through
+      # the central Alloy ingress and must not also be tailed here.
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        regex         = "ms"
+        action        = "drop"
+      }
+
       rule {
         source_labels = ["__meta_kubernetes_namespace"]
         target_label  = "namespace"
