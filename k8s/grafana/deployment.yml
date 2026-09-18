@@ -60,6 +60,10 @@ spec:
           volumeMounts:
             - name: datasources
               mountPath: /etc/grafana/provisioning/datasources
+            - name: oco-shared-datasources
+              mountPath: /etc/grafana/provisioning/datasources/shared-datasources.yml
+              subPath: shared-datasources.yml
+              readOnly: true
             - name: dashboard-provider
               mountPath: /etc/grafana/provisioning/dashboards
             - name: dashboards
@@ -88,7 +92,22 @@ spec:
             - name: FOLDER
               value: /etc/grafana/provisioning/datasources
             - name: NAMESPACE
-              value: observability-console,llm-runtime,host-runtime,rr,ms    # watched-namespace set — append each onboarded consumer
+              value: llm-runtime,host-runtime,rr,ms
+            - name: REQ_URL
+              value: http://127.0.0.1:3000/api/admin/provisioning/datasources/reload
+            - name: REQ_METHOD
+              value: POST
+            - name: REQ_USERNAME
+              value: admin
+            - name: REQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-admin
+                  key: admin-password
+            - name: REQ_RETRY_TOTAL
+              value: "10"
+            - name: REQ_RETRY_CONNECT
+              value: "10"
           volumeMounts:
             - name: datasources
               mountPath: /etc/grafana/provisioning/datasources
@@ -106,13 +125,19 @@ spec:
             - name: FOLDER
               value: /var/lib/grafana/dashboards
             - name: NAMESPACE
-              value: observability-console,llm-runtime,host-runtime,rr,ms
+              value: llm-runtime,host-runtime,rr,ms
           volumeMounts:
             - name: dashboards
               mountPath: /var/lib/grafana/dashboards
       volumes:
         - name: datasources
           emptyDir: {}
+        - name: oco-shared-datasources
+          configMap:
+            name: oco-shared-datasources
+            items:
+              - key: shared-datasources.yml
+                path: shared-datasources.yml
         - name: dashboards
           emptyDir: {}
         - name: dashboard-provider
