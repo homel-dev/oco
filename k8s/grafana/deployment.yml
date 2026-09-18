@@ -64,6 +64,9 @@ spec:
               mountPath: /etc/grafana/provisioning/dashboards
             - name: dashboards
               mountPath: /var/lib/grafana/dashboards
+            - name: oco-dashboard
+              mountPath: /var/lib/grafana/oco
+              readOnly: true
           resources:
             requests:
               cpu: 100m
@@ -115,3 +118,6 @@ spec:
         - name: dashboard-provider
           configMap:
             name: grafana-dashboard-provider
+        - name: oco-dashboard
+          configMap:
+            name: oco-dashboard
