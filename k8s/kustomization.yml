@@ -10,6 +10,7 @@ resources:
   - grafana/secret.yml
   - grafana/configmap-dashboard-provider.yml
   - grafana/configmap-oco-dashboard.yml
+  - grafana/configmap-ai-runtime-dashboard.yml
   - grafana/configmap-shared-datasources.yml
   - grafana/deployment.yml
   - grafana/service.yml

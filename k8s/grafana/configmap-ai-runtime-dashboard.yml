@@ -1,0 +1,2213 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oco-ai-runtime-dashboard
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/component: dashboard
+    app.kubernetes.io/part-of: homel-observability
+data:
+  ai-runtime-operations.json: |-
+    {
+      "annotations": {
+        "list": []
+      },
+      "description": "Operational AI Runtime dashboard. All metrics are read from OCO VictoriaMetrics; llm-runtime Alloy is the only namespace-local telemetry collector/forwarder.",
+      "editable": false,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "id": 1,
+          "type": "stat",
+          "title": "Alloy",
+          "description": "Namespace-local collector and forwarder.",
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 4,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "noValue": "N/A",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "DOWN",
+                      "color": "red"
+                    },
+                    "1": {
+                      "text": "UP",
+                      "color": "green"
+                    }
+                  }
+                }
+              ]
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "expr": "max(up{project=\"llm-runtime\",job=\"alloy\"})",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Native OpenAI Gateway",
+          "description": "Native OpenAI-compatible policy/router gateway.",
+          "gridPos": {
+            "x": 4,
+            "y": 0,
+            "w": 4,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "noValue": "N/A",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "DOWN",
+                      "color": "red"
+                    },
+                    "1": {
+                      "text": "UP",
+                      "color": "green"
+                    }
+                  }
+                }
+              ]
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "expr": "max(up{project=\"llm-runtime\",job=\"llm-gateway\"})",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "OmniRoute",
+          "description": "HTTP health probe executed inside Alloy.",
+          "gridPos": {
+            "x": 8,
+            "y": 0,
+            "w": 4,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "noValue": "N/A",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "DOWN",
+                      "color": "red"
+                    },
+                    "1": {
+                      "text": "UP",
+                      "color": "green"
+                    }
+                  }
+                }
+              ]
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "expr": "max(probe_success{project=\"llm-runtime\",job=\"omniroute-blackbox\"})",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "MCP Gateway",
+          "description": "Envoy MCP data plane metrics endpoint.",
+          "gridPos": {
+            "x": 12,
+            "y": 0,
+            "w": 4,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "noValue": "N/A",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              },
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "DOWN",
+                      "color": "red"
+                    },
+                    "1": {
+                      "text": "UP",
+                      "color": "green"
+                    }
+                  }
+                }
+              ]
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "expr": "max(up{project=\"llm-runtime\",job=\"mcp-envoy\"})",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "Inference online",
+          "description": "Only inference Services currently discovered by Alloy.",
+          "gridPos": {
+            "x": 16,
+            "y": 0,
+            "w": 4,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "noValue": "N/A"
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "expr": "sum(up{project=\"llm-runtime\",component=\"inference\"} == 1)",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "type": "stat",
+          "title": "GPUs visible",
+          "description": "GPU devices exported by DCGM.",
+          "gridPos": {
+            "x": 20,
+            "y": 0,
+            "w": 4,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "noValue": "N/A"
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "expr": "count(DCGM_FI_DEV_GPU_UTIL{project=\"llm-runtime\"})",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "type": "row",
+          "title": "Traffic & Gateways",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 3,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "id": 11,
+          "type": "gauge",
+          "title": "Gateway RPS",
+          "description": "Completed upstream requests.",
+          "gridPos": {
+            "x": 0,
+            "y": 4,
+            "w": 4,
+            "h": 4
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "noValue": "N/A",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(llm_gateway_upstream_requests_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval]))",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "type": "gauge",
+          "title": "Gateway p95",
+          "description": "",
+          "gridPos": {
+            "x": 4,
+            "y": 4,
+            "w": 4,
+            "h": 4
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "noValue": "N/A",
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 10
+                  },
+                  {
+                    "color": "red",
+                    "value": 30
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(llm_gateway_request_duration_seconds_bucket{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval])))",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 13,
+          "type": "gauge",
+          "title": "Gateway error %",
+          "description": "",
+          "gridPos": {
+            "x": 8,
+            "y": 4,
+            "w": 4,
+            "h": 4
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "noValue": "N/A",
+              "min": 0,
+              "max": 100,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1
+                  },
+                  {
+                    "color": "red",
+                    "value": 5
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "expr": "100 * ((sum(rate(llm_gateway_upstream_requests_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\",status_code=~\"5..\"}[$__rate_interval])) + sum(rate(llm_gateway_upstream_errors_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval]))) / clamp_min(sum(rate(llm_gateway_upstream_requests_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval])) + sum(rate(llm_gateway_upstream_errors_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval])), 0.000001))",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 14,
+          "type": "gauge",
+          "title": "In flight",
+          "description": "",
+          "gridPos": {
+            "x": 12,
+            "y": 4,
+            "w": 4,
+            "h": 4
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "noValue": "N/A",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "expr": "sum(llm_gateway_requests_in_flight{project=\"llm-runtime\",backend=~\"$backend\"})",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 15,
+          "type": "gauge",
+          "title": "OmniRoute RPS",
+          "description": "",
+          "gridPos": {
+            "x": 16,
+            "y": 4,
+            "w": 4,
+            "h": 4
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "noValue": "N/A",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(omniroute_calls_total[$__rate_interval]))",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 16,
+          "type": "gauge",
+          "title": "MCP RPS",
+          "description": "",
+          "gridPos": {
+            "x": 20,
+            "y": 4,
+            "w": 4,
+            "h": 4
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "noValue": "N/A",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(envoy_http_downstream_rq_total{project=\"llm-runtime\",job=\"mcp-envoy\"}[$__rate_interval]))",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 20,
+          "type": "timeseries",
+          "title": "Native gateway \u00b7 backend / model / status",
+          "description": "",
+          "gridPos": {
+            "x": 0,
+            "y": 8,
+            "w": 12,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum by (backend, model, status_code) (rate(llm_gateway_upstream_requests_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval]))",
+              "legendFormat": "{{backend}} \u00b7 {{model}} \u00b7 {{status_code}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 21,
+          "type": "timeseries",
+          "title": "Native gateway \u00b7 latency",
+          "description": "",
+          "gridPos": {
+            "x": 12,
+            "y": 8,
+            "w": 12,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum by (le, backend) (rate(llm_gateway_request_duration_seconds_bucket{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval])))",
+              "legendFormat": "p50 \u00b7 {{backend}}",
+              "refId": "A"
+            },
+            {
+              "expr": "histogram_quantile(0.95, sum by (le, backend) (rate(llm_gateway_request_duration_seconds_bucket{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval])))",
+              "legendFormat": "p95 \u00b7 {{backend}}",
+              "refId": "B"
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum by (le, backend) (rate(llm_gateway_request_duration_seconds_bucket{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval])))",
+              "legendFormat": "p99 \u00b7 {{backend}}",
+              "refId": "C"
+            }
+          ]
+        },
+        {
+          "id": 22,
+          "type": "timeseries",
+          "title": "Errors & policy rejects",
+          "description": "",
+          "gridPos": {
+            "x": 0,
+            "y": 14,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum by (backend, model, reason) (rate(llm_gateway_upstream_errors_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval]))",
+              "legendFormat": "upstream \u00b7 {{reason}} \u00b7 {{backend}} \u00b7 {{model}}",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (reason, status_code) (rate(llm_gateway_rejected_requests_total{project=\"llm-runtime\"}[$__rate_interval]))",
+              "legendFormat": "reject \u00b7 {{reason}} \u00b7 {{status_code}}",
+              "refId": "B"
+            }
+          ]
+        },
+        {
+          "id": 23,
+          "type": "timeseries",
+          "title": "Backend last-request health",
+          "description": "",
+          "gridPos": {
+            "x": 8,
+            "y": 14,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "min": 0,
+              "max": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "llm_gateway_backend_last_request_success{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}",
+              "legendFormat": "{{backend}} \u00b7 {{model}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 24,
+          "type": "timeseries",
+          "title": "Gateway payload throughput",
+          "description": "",
+          "gridPos": {
+            "x": 16,
+            "y": 14,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "Bps",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum by (backend) (rate(llm_gateway_request_bytes_total{project=\"llm-runtime\",backend=~\"$backend\"}[$__rate_interval]))",
+              "legendFormat": "request \u00b7 {{backend}}",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (backend) (rate(llm_gateway_response_bytes_total{project=\"llm-runtime\",backend=~\"$backend\"}[$__rate_interval]))",
+              "legendFormat": "response \u00b7 {{backend}}",
+              "refId": "B"
+            }
+          ]
+        },
+        {
+          "id": 30,
+          "type": "row",
+          "title": "OmniRoute & MCP",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 19,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "id": 31,
+          "type": "timeseries",
+          "title": "OmniRoute \u00b7 provider / model",
+          "description": "",
+          "gridPos": {
+            "x": 0,
+            "y": 20,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum by (gen_ai_provider_name, gen_ai_request_model) (rate(omniroute_calls_total[$__rate_interval]))",
+              "legendFormat": "{{gen_ai_provider_name}} \u00b7 {{gen_ai_request_model}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 32,
+          "type": "timeseries",
+          "title": "OmniRoute \u00b7 routing outcome",
+          "description": "",
+          "gridPos": {
+            "x": 8,
+            "y": 20,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum by (omniroute_routing_outcome) (rate(omniroute_calls_total[$__rate_interval]))",
+              "legendFormat": "{{omniroute_routing_outcome}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 33,
+          "type": "timeseries",
+          "title": "OmniRoute \u00b7 latency & fallback",
+          "description": "",
+          "gridPos": {
+            "x": 16,
+            "y": 20,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(omniroute_duration_seconds_bucket[$__rate_interval])))",
+              "legendFormat": "p95 latency",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(omniroute_calls_total{omniroute_routing_fallback_used=\"1\"}[$__rate_interval]))",
+              "legendFormat": "fallback/s",
+              "refId": "B"
+            }
+          ]
+        },
+        {
+          "id": 34,
+          "type": "timeseries",
+          "title": "MCP \u00b7 HTTP traffic",
+          "description": "",
+          "gridPos": {
+            "x": 0,
+            "y": 25,
+            "w": 12,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(envoy_http_downstream_rq_total{project=\"llm-runtime\",job=\"mcp-envoy\"}[$__rate_interval]))",
+              "legendFormat": "requests/s",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 35,
+          "type": "timeseries",
+          "title": "MCP \u00b7 upstream p95",
+          "description": "",
+          "gridPos": {
+            "x": 12,
+            "y": 25,
+            "w": 12,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(envoy_cluster_upstream_rq_time_bucket{project=\"llm-runtime\",job=\"mcp-envoy\"}[$__rate_interval]))) / 1000",
+              "legendFormat": "p95",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 40,
+          "type": "row",
+          "title": "Inference & GPU",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 30,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "id": 41,
+          "type": "timeseries",
+          "title": "Inference availability",
+          "description": "",
+          "gridPos": {
+            "x": 0,
+            "y": 31,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "min": 0,
+              "max": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "up{project=\"llm-runtime\",component=\"inference\",tier=~\"$tier\"}",
+              "legendFormat": "{{tier}} \u00b7 {{service}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 42,
+          "type": "timeseries",
+          "title": "vLLM scheduler",
+          "description": "",
+          "gridPos": {
+            "x": 8,
+            "y": 31,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum by (tier) (vllm:num_requests_running{project=\"llm-runtime\",component=\"inference\",tier=~\"$tier\"})",
+              "legendFormat": "{{tier}} running",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (tier) (vllm:num_requests_waiting{project=\"llm-runtime\",component=\"inference\",tier=~\"$tier\"})",
+              "legendFormat": "{{tier}} waiting",
+              "refId": "B"
+            }
+          ]
+        },
+        {
+          "id": 43,
+          "type": "timeseries",
+          "title": "vLLM token throughput",
+          "description": "",
+          "gridPos": {
+            "x": 16,
+            "y": 31,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "tps",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum by (tier) (rate(vllm:prompt_tokens_total{project=\"llm-runtime\",component=\"inference\",tier=~\"$tier\"}[$__rate_interval]))",
+              "legendFormat": "{{tier}} prompt",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (tier) (rate(vllm:generation_tokens_total{project=\"llm-runtime\",component=\"inference\",tier=~\"$tier\"}[$__rate_interval]))",
+              "legendFormat": "{{tier}} generation",
+              "refId": "B"
+            }
+          ]
+        },
+        {
+          "id": 44,
+          "type": "timeseries",
+          "title": "GPU utilization",
+          "description": "",
+          "gridPos": {
+            "x": 0,
+            "y": 36,
+            "w": 6,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "min": 0,
+              "max": 100
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "DCGM_FI_DEV_GPU_UTIL{project=\"llm-runtime\",gpu=~\"$gpu\"}",
+              "legendFormat": "GPU {{gpu}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 45,
+          "type": "timeseries",
+          "title": "Framebuffer used",
+          "description": "",
+          "gridPos": {
+            "x": 6,
+            "y": 36,
+            "w": 6,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "bytes",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "DCGM_FI_DEV_FB_USED{project=\"llm-runtime\",gpu=~\"$gpu\"} * 1024 * 1024",
+              "legendFormat": "GPU {{gpu}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 46,
+          "type": "timeseries",
+          "title": "GPU temperature",
+          "description": "",
+          "gridPos": {
+            "x": 12,
+            "y": 36,
+            "w": 6,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "celsius",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "DCGM_FI_DEV_GPU_TEMP{project=\"llm-runtime\",gpu=~\"$gpu\"}",
+              "legendFormat": "GPU {{gpu}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 47,
+          "type": "timeseries",
+          "title": "GPU power",
+          "description": "",
+          "gridPos": {
+            "x": 18,
+            "y": 36,
+            "w": 6,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "watt",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "DCGM_FI_DEV_POWER_USAGE{project=\"llm-runtime\",gpu=~\"$gpu\"}",
+              "legendFormat": "GPU {{gpu}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 50,
+          "type": "row",
+          "title": "Collector & Telemetry Path",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 41,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "id": 51,
+          "type": "timeseries",
+          "title": "Scrape / probe health",
+          "description": "",
+          "gridPos": {
+            "x": 0,
+            "y": 42,
+            "w": 12,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "min": 0,
+              "max": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "up{project=\"llm-runtime\"}",
+              "legendFormat": "{{job}} \u00b7 {{service}}",
+              "refId": "A"
+            },
+            {
+              "expr": "probe_success{project=\"llm-runtime\",job=\"omniroute-blackbox\"}",
+              "legendFormat": "omniroute probe",
+              "refId": "B"
+            }
+          ]
+        },
+        {
+          "id": 52,
+          "type": "timeseries",
+          "title": "Alloy process",
+          "description": "",
+          "gridPos": {
+            "x": 12,
+            "y": 42,
+            "w": 12,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "noValue": "N/A",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                },
+                "axisPlacement": "auto",
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "hideFrom": {
+                  "tooltip": false,
+                  "viz": false,
+                  "legend": false
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true,
+              "calcs": [
+                "lastNotNull"
+              ]
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "rate(process_cpu_seconds_total{project=\"llm-runtime\",job=\"alloy\"}[$__rate_interval])",
+              "legendFormat": "CPU cores",
+              "refId": "A"
+            },
+            {
+              "expr": "process_resident_memory_bytes{project=\"llm-runtime\",job=\"alloy\"} / 1024 / 1024 / 1024",
+              "legendFormat": "RSS GiB",
+              "refId": "B"
+            }
+          ]
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 40,
+      "tags": [
+        "oco",
+        "ai-runtime",
+        "llm-runtime"
+      ],
+      "templating": {
+        "list": [
+          {
+            "name": "backend",
+            "label": "Gateway backend",
+            "type": "query",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "victoriametrics"
+            },
+            "query": {
+              "query": "label_values(llm_gateway_upstream_requests_total{project=\"llm-runtime\"}, backend)",
+              "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            },
+            "definition": "label_values(llm_gateway_upstream_requests_total{project=\"llm-runtime\"}, backend)",
+            "includeAll": true,
+            "multi": true,
+            "refresh": 2,
+            "sort": 1,
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "allValue": ".*",
+            "options": [],
+            "regex": ""
+          },
+          {
+            "name": "model",
+            "label": "Model",
+            "type": "query",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "victoriametrics"
+            },
+            "query": {
+              "query": "label_values(llm_gateway_upstream_requests_total{project=\"llm-runtime\",backend=~\"$backend\"}, model)",
+              "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            },
+            "definition": "label_values(llm_gateway_upstream_requests_total{project=\"llm-runtime\",backend=~\"$backend\"}, model)",
+            "includeAll": true,
+            "multi": true,
+            "refresh": 2,
+            "sort": 1,
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "allValue": ".*",
+            "options": [],
+            "regex": ""
+          },
+          {
+            "name": "tier",
+            "label": "Inference tier",
+            "type": "query",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "victoriametrics"
+            },
+            "query": {
+              "query": "label_values(up{project=\"llm-runtime\",component=\"inference\"}, tier)",
+              "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            },
+            "definition": "label_values(up{project=\"llm-runtime\",component=\"inference\"}, tier)",
+            "includeAll": true,
+            "multi": true,
+            "refresh": 2,
+            "sort": 1,
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "allValue": ".*",
+            "options": [],
+            "regex": ""
+          },
+          {
+            "name": "gpu",
+            "label": "GPU",
+            "type": "query",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "victoriametrics"
+            },
+            "query": {
+              "query": "label_values(DCGM_FI_DEV_GPU_UTIL{project=\"llm-runtime\"}, gpu)",
+              "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            },
+            "definition": "label_values(DCGM_FI_DEV_GPU_UTIL{project=\"llm-runtime\"}, gpu)",
+            "includeAll": true,
+            "multi": true,
+            "refresh": 2,
+            "sort": 1,
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "allValue": ".*",
+            "options": [],
+            "regex": ""
+          }
+        ]
+      },
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "timepicker": {
+        "refresh_intervals": [
+          "5s",
+          "10s",
+          "30s",
+          "1m",
+          "5m"
+        ]
+      },
+      "timezone": "browser",
+      "title": "AI Runtime \u00b7 Operations",
+      "uid": "oco-ai-runtime-operations",
+      "version": 1,
+      "weekStart": ""
+    }

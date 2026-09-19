@@ -144,5 +144,9 @@ spec:
           configMap:
             name: grafana-dashboard-provider
         - name: oco-dashboard
-          configMap:
-            name: oco-dashboard
+          projected:
+            sources:
+              - configMap:
+                  name: oco-dashboard
+              - configMap:
+                  name: oco-ai-runtime-dashboard
