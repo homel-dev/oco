@@ -68,9 +68,6 @@ spec:
               mountPath: /etc/grafana/provisioning/dashboards
             - name: dashboards
               mountPath: /var/lib/grafana/dashboards
-            - name: oco-dashboard
-              mountPath: /var/lib/grafana/oco
-              readOnly: true
           resources:
             requests:
               cpu: 100m
@@ -125,7 +122,22 @@ spec:
             - name: FOLDER
               value: /var/lib/grafana/dashboards
             - name: NAMESPACE
-              value: llm-runtime,host-runtime,rr,ms
+              value: observability-console,llm-runtime,host-runtime,rr,ms
+            - name: REQ_URL
+              value: http://127.0.0.1:3000/api/admin/provisioning/dashboards/reload
+            - name: REQ_METHOD
+              value: POST
+            - name: REQ_USERNAME
+              value: admin
+            - name: REQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-admin
+                  key: admin-password
+            - name: REQ_RETRY_TOTAL
+              value: "10"
+            - name: REQ_RETRY_CONNECT
+              value: "10"
           volumeMounts:
             - name: dashboards
               mountPath: /var/lib/grafana/dashboards
@@ -143,10 +155,3 @@ spec:
         - name: dashboard-provider
           configMap:
             name: grafana-dashboard-provider
-        - name: oco-dashboard
-          projected:
-            sources:
-              - configMap:
-                  name: oco-dashboard
-              - configMap:
-                  name: oco-ai-runtime-dashboard

@@ -10,18 +10,9 @@ data:
   dashboards.yml: |
     apiVersion: 1
     providers:
-      - name: oco-dashboards
+      - name: shared-dashboards
         orgId: 1
         folder: OCO
-        type: file
-        disableDeletion: false
-        allowUiUpdates: false
-        updateIntervalSeconds: 10
-        options:
-          path: /var/lib/grafana/oco
-      - name: consumer-dashboards
-        orgId: 1
-        folder: Consumer Dashboards
         type: file
         disableDeletion: false
         allowUiUpdates: false

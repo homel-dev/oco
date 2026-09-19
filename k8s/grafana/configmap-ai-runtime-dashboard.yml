@@ -5,6 +5,7 @@ metadata:
   labels:
     app.kubernetes.io/name: grafana
     app.kubernetes.io/component: dashboard
+    grafana_dashboard: "1"
     app.kubernetes.io/part-of: homel-observability
 data:
   ai-runtime-operations.json: |-
@@ -1274,7 +1275,7 @@ data:
               "refId": "A"
             },
             {
-              "expr": "sum(rate(omniroute_calls_total{omniroute_routing_fallback_used=\"1\"}[$__rate_interval]))",
+              "expr": "sum(rate(omniroute_calls_total{omniroute_routing_fallback_used=~\"true|1\"}[$__rate_interval]))",
               "legendFormat": "fallback/s",
               "refId": "B"
             }
@@ -1502,7 +1503,7 @@ data:
         {
           "id": 42,
           "type": "timeseries",
-          "title": "vLLM scheduler",
+          "title": "Inference scheduler",
           "description": "",
           "gridPos": {
             "x": 8,
@@ -1569,13 +1570,23 @@ data:
               "expr": "sum by (tier) (vllm:num_requests_waiting{project=\"llm-runtime\",component=\"inference\",tier=~\"$tier\"})",
               "legendFormat": "{{tier}} waiting",
               "refId": "B"
+            },
+            {
+              "expr": "sum by (tier) (llamacpp:requests_processing{project=\"llm-runtime\",component=\"inference\",tier=~\"$tier\"})",
+              "legendFormat": "{{tier}} processing",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (tier) (llamacpp:requests_deferred{project=\"llm-runtime\",component=\"inference\",tier=~\"$tier\"})",
+              "legendFormat": "{{tier}} deferred",
+              "refId": "D"
             }
           ]
         },
         {
           "id": 43,
           "type": "timeseries",
-          "title": "vLLM token throughput",
+          "title": "Inference token throughput",
           "description": "",
           "gridPos": {
             "x": 16,
@@ -1642,6 +1653,16 @@ data:
               "expr": "sum by (tier) (rate(vllm:generation_tokens_total{project=\"llm-runtime\",component=\"inference\",tier=~\"$tier\"}[$__rate_interval]))",
               "legendFormat": "{{tier}} generation",
               "refId": "B"
+            },
+            {
+              "expr": "sum by (tier) (rate(llamacpp:prompt_tokens_total{project=\"llm-runtime\",component=\"inference\",tier=~\"$tier\"}[$__rate_interval]))",
+              "legendFormat": "{{tier}} prompt",
+              "refId": "C"
+            },
+            {
+              "expr": "sum by (tier) (rate(llamacpp:tokens_predicted_total{project=\"llm-runtime\",component=\"inference\",tier=~\"$tier\"}[$__rate_interval]))",
+              "legendFormat": "{{tier}} generation",
+              "refId": "D"
             }
           ]
         },

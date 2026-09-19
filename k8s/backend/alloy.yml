@@ -207,6 +207,7 @@ data:
         {"__address__" = "victorialogs:9428",    "project" = "oco", "service" = "victorialogs"},
         {"__address__" = "tempo:3200",           "project" = "oco", "service" = "tempo"},
       ]
+      scrape_interval = "15s"
       forward_to = [prometheus.remote_write.vm.receiver]
     }
 ---
