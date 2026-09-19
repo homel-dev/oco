@@ -1,0 +1,2081 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oco-rr-live-run-dashboard
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/component: dashboard
+    grafana_dashboard: "1"
+    app.kubernetes.io/part-of: homel-observability
+data:
+  rr-live-run.json: |-
+    {
+      "annotations": {
+        "list": []
+      },
+      "description": "Live RR execution dashboard backed by OCO VictoriaLogs/VictoriaMetrics plus Memory Steward Postgres. RR panels read the rr namespace already tailed by central Alloy; runtime panels read actual llm-runtime gateway/MCP metrics; memory panels read canonical telemetry tables.",
+      "editable": false,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [
+        {
+          "title": "AI Runtime \u00b7 Operations",
+          "type": "link",
+          "url": "/d/oco-ai-runtime-operations/ai-runtime-operations",
+          "targetBlank": false
+        },
+        {
+          "title": "Memory Steward \u00b7 Overview",
+          "type": "link",
+          "url": "/d/ms-overview/memory-steward-overview",
+          "targetBlank": false
+        }
+      ],
+      "liveNow": true,
+      "panels": [
+        {
+          "id": 1,
+          "type": "stat",
+          "title": "RR events",
+          "description": "Structured RR events in the selected time range and run filter.",
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 3,
+            "h": 3
+          },
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "victorialogs"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "victorialogs"
+              },
+              "editorMode": "code",
+              "expr": "{namespace=\"rr\"} AND runId:$run_id AND event_type:* | stats count() as value",
+              "queryType": "stats",
+              "refId": "A",
+              "maxLines": 500
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "RR failures",
+          "description": "RR events marked failed or error.",
+          "gridPos": {
+            "x": 3,
+            "y": 0,
+            "w": 3,
+            "h": 3
+          },
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "victorialogs"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 1
+                  },
+                  {
+                    "color": "red",
+                    "value": 5
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "victorialogs"
+              },
+              "editorMode": "code",
+              "expr": "{namespace=\"rr\"} AND runId:$run_id AND (status:=\"failed\" OR detected_level:=\"error\") | stats count() as value",
+              "queryType": "stats",
+              "refId": "A",
+              "maxLines": 500
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "LLM req/s",
+          "description": "Shared llm-runtime gateway request throughput.",
+          "gridPos": {
+            "x": 6,
+            "y": 0,
+            "w": 3,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "blue",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "reqps",
+              "decimals": 2
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "sum(rate(llm_gateway_upstream_requests_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval]))",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "LLM p95",
+          "description": "Shared llm-runtime gateway p95 upstream duration.",
+          "gridPos": {
+            "x": 9,
+            "y": 0,
+            "w": 3,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "purple",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "s",
+              "decimals": 2
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(llm_gateway_request_duration_seconds_bucket{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval])))",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "type": "stat",
+          "title": "Gateway error %",
+          "description": "5xx plus transport failures over all completed/failed upstream requests.",
+          "gridPos": {
+            "x": 12,
+            "y": 0,
+            "w": 3,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 1
+                  },
+                  {
+                    "color": "red",
+                    "value": 5
+                  }
+                ]
+              },
+              "unit": "percent",
+              "decimals": 2
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "100 * ((sum(rate(llm_gateway_upstream_requests_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\",status_code=~\"5..\"}[$__rate_interval])) + sum(rate(llm_gateway_upstream_errors_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval]))) / clamp_min(sum(rate(llm_gateway_upstream_requests_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval])) + sum(rate(llm_gateway_upstream_errors_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval])), 0.000001))",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "type": "stat",
+          "title": "MCP req/s",
+          "description": "Envoy MCP gateway downstream request rate.",
+          "gridPos": {
+            "x": 15,
+            "y": 0,
+            "w": 3,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "reqps",
+              "decimals": 2
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "sum(rate(envoy_http_downstream_rq_total{project=\"llm-runtime\",job=\"mcp-envoy\"}[$__rate_interval]))",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "type": "stat",
+          "title": "MS requests \u00b7 5m",
+          "description": "Memory Steward router requests for the selected project(s).",
+          "gridPos": {
+            "x": 18,
+            "y": 0,
+            "w": 3,
+            "h": 3
+          },
+          "datasource": {
+            "type": "postgres",
+            "uid": "memory-steward-postgres"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "purple",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "postgres",
+                "uid": "memory-steward-postgres"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "rawSql": "SELECT count(*)::bigint AS value FROM telemetry.request WHERE t_begin >= now()-interval '5 minutes' AND ('__all' IN (${project:sqlstring}) OR project_id IN (${project:sqlstring}))",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 8,
+          "type": "stat",
+          "title": "MS zero-result %",
+          "description": "Memory retrievals that returned zero selected chunks.",
+          "gridPos": {
+            "x": 21,
+            "y": 0,
+            "w": 3,
+            "h": 3
+          },
+          "datasource": {
+            "type": "postgres",
+            "uid": "memory-steward-postgres"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 5
+                  },
+                  {
+                    "color": "red",
+                    "value": 15
+                  }
+                ]
+              },
+              "unit": "percent",
+              "decimals": 1
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "postgres",
+                "uid": "memory-steward-postgres"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "rawSql": "SELECT COALESCE(100.0*count(*) FILTER(WHERE x.selected_topk=0)/NULLIF(count(*),0),0) AS value FROM telemetry.retrieval x JOIN telemetry.request r USING(request_id) WHERE $__timeFilter(r.t_begin) AND ('__all' IN (${project:sqlstring}) OR r.project_id IN (${project:sqlstring}))",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 9,
+          "type": "timeseries",
+          "title": "RR event stream",
+          "description": "Live structured RR event rate grouped by event type.",
+          "gridPos": {
+            "x": 0,
+            "y": 3,
+            "w": 9,
+            "h": 6
+          },
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "victorialogs"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 22,
+                "gradientMode": "opacity",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "pointSize": 3,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc",
+              "hideZeros": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "victorialogs"
+              },
+              "editorMode": "code",
+              "expr": "{namespace=\"rr\"} AND runId:$run_id AND event_type:* | stats by (event_type) count() as events",
+              "queryType": "statsRange",
+              "refId": "A",
+              "maxLines": 500,
+              "legendFormat": "{{event_type}}"
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "type": "timeseries",
+          "title": "LLM gateway \u00b7 requests by model",
+          "description": "Shared gateway traffic; model/backend filters apply.",
+          "gridPos": {
+            "x": 9,
+            "y": 3,
+            "w": 9,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 18,
+                "gradientMode": "opacity",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "pointSize": 3,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "reqps"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc",
+              "hideZeros": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "sum by (model) (rate(llm_gateway_upstream_requests_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval]))",
+              "refId": "A",
+              "legendFormat": "{{model}}"
+            }
+          ]
+        },
+        {
+          "id": 11,
+          "type": "bargauge",
+          "title": "Runtime health",
+          "description": "Observed health from VictoriaMetrics. Any missing series remains visible as no data.",
+          "gridPos": {
+            "x": 18,
+            "y": 3,
+            "w": 6,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 0,
+              "min": 0,
+              "max": 1,
+              "unit": "percentunit",
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "DOWN",
+                      "color": "red"
+                    },
+                    "1": {
+                      "text": "UP",
+                      "color": "green"
+                    }
+                  }
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 0.5
+                  },
+                  {
+                    "color": "green",
+                    "value": 0.999
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "displayMode": "gradient",
+            "maxVizHeight": 300,
+            "minVizHeight": 16,
+            "minVizWidth": 8,
+            "namePlacement": "left",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": true,
+            "sizing": "auto",
+            "valueMode": "color"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "max(up{project=\"llm-runtime\",job=\"alloy\"})",
+              "refId": "A",
+              "legendFormat": "Alloy"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "max(up{project=\"llm-runtime\",job=\"llm-gateway\"})",
+              "refId": "B",
+              "legendFormat": "LLM Gateway"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "max(probe_success{project=\"llm-runtime\",job=\"omniroute-blackbox\"})",
+              "refId": "C",
+              "legendFormat": "OmniRoute"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "max(up{project=\"llm-runtime\",job=\"mcp-envoy\"})",
+              "refId": "D",
+              "legendFormat": "MCP Gateway"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "min(up{project=\"llm-runtime\",component=\"inference\"})",
+              "refId": "E",
+              "legendFormat": "Inference"
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "type": "timeseries",
+          "title": "LLM gateway \u00b7 latency",
+          "description": "Native gateway end-to-end upstream request duration.",
+          "gridPos": {
+            "x": 0,
+            "y": 9,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 8,
+                "gradientMode": "opacity",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "pointSize": 3,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc",
+              "hideZeros": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "histogram_quantile(0.50, sum by (le) (rate(llm_gateway_request_duration_seconds_bucket{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval])))",
+              "refId": "A",
+              "legendFormat": "p50"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(llm_gateway_request_duration_seconds_bucket{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval])))",
+              "refId": "B",
+              "legendFormat": "p95"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "histogram_quantile(0.99, sum by (le) (rate(llm_gateway_request_duration_seconds_bucket{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval])))",
+              "refId": "C",
+              "legendFormat": "p99"
+            }
+          ]
+        },
+        {
+          "id": 13,
+          "type": "piechart",
+          "title": "Model distribution \u00b7 requests",
+          "description": "Request-count share over the selected time range. This is request distribution, not token distribution.",
+          "gridPos": {
+            "x": 8,
+            "y": 9,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "mappings": [],
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "displayLabels": [
+              "name",
+              "percent"
+            ],
+            "legend": {
+              "displayMode": "table",
+              "placement": "right",
+              "showLegend": true,
+              "values": [
+                "value",
+                "percent"
+              ]
+            },
+            "pieType": "donut",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none",
+              "hideZeros": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "sum by (model) (increase(llm_gateway_upstream_requests_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__range]))",
+              "refId": "A",
+              "legendFormat": "{{model}}",
+              "instant": true,
+              "range": false
+            }
+          ]
+        },
+        {
+          "id": 14,
+          "type": "timeseries",
+          "title": "MCP gateway \u00b7 p95 upstream latency",
+          "description": "Live Envoy MCP gateway upstream p95 latency from OCO VictoriaMetrics.",
+          "gridPos": {
+            "x": 16,
+            "y": 9,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 12,
+                "gradientMode": "opacity",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "pointSize": 3,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "s",
+              "decimals": 2
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc",
+              "hideZeros": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(envoy_cluster_upstream_rq_time_bucket{project=\"llm-runtime\",job=\"mcp-envoy\"}[$__rate_interval]))) / 1000",
+              "legendFormat": "p95",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 15,
+          "type": "logs",
+          "title": "RR live events",
+          "description": "Live RR namespace events from VictoriaLogs. run_id textbox filters when supplied.",
+          "gridPos": {
+            "x": 0,
+            "y": 14,
+            "w": 12,
+            "h": 8
+          },
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "victorialogs"
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          },
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": false
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "victorialogs"
+              },
+              "editorMode": "code",
+              "expr": "{namespace=\"rr\"} AND runId:$run_id AND event_type:* | fields _time,event_type,taskName,status,detected_level,msg,runId,project,pod,container",
+              "queryType": "instant",
+              "refId": "A",
+              "maxLines": 500
+            }
+          ]
+        },
+        {
+          "id": 16,
+          "type": "table",
+          "title": "RR current activity",
+          "description": "Same live event stream as a dense table for scanning execution state.",
+          "gridPos": {
+            "x": 12,
+            "y": 14,
+            "w": 12,
+            "h": 8
+          },
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "victorialogs"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "footer": {
+                  "reducers": []
+                },
+                "inspect": false
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true,
+            "sortBy": []
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "victorialogs"
+              },
+              "editorMode": "code",
+              "expr": "{namespace=\"rr\"} AND runId:$run_id AND event_type:* | fields _time,event_type,taskName,status,detected_level,msg,runId,project",
+              "queryType": "instant",
+              "refId": "A",
+              "maxLines": 500
+            }
+          ]
+        },
+        {
+          "id": 17,
+          "type": "timeseries",
+          "title": "Memory retrieval \u00b7 candidates / selected",
+          "description": "Average Memory Steward retrieval pool and returned top-k.",
+          "gridPos": {
+            "x": 0,
+            "y": 22,
+            "w": 8,
+            "h": 6
+          },
+          "datasource": {
+            "type": "postgres",
+            "uid": "memory-steward-postgres"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 12,
+                "gradientMode": "opacity",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "pointSize": 3,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc",
+              "hideZeros": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "postgres",
+                "uid": "memory-steward-postgres"
+              },
+              "editorMode": "code",
+              "format": "time_series",
+              "rawQuery": true,
+              "rawSql": "SELECT date_trunc('minute',r.t_begin) AS time,avg(x.dense_candidates) AS value FROM telemetry.retrieval x JOIN telemetry.request r USING(request_id) WHERE $__timeFilter(r.t_begin) AND ('__all' IN (${project:sqlstring}) OR r.project_id IN (${project:sqlstring})) GROUP BY 1 ORDER BY 1",
+              "refId": "A",
+              "legendFormat": "dense candidates"
+            },
+            {
+              "datasource": {
+                "type": "postgres",
+                "uid": "memory-steward-postgres"
+              },
+              "editorMode": "code",
+              "format": "time_series",
+              "rawQuery": true,
+              "rawSql": "SELECT date_trunc('minute',r.t_begin) AS time,avg(x.selected_topk) AS value FROM telemetry.retrieval x JOIN telemetry.request r USING(request_id) WHERE $__timeFilter(r.t_begin) AND ('__all' IN (${project:sqlstring}) OR r.project_id IN (${project:sqlstring})) GROUP BY 1 ORDER BY 1",
+              "refId": "B",
+              "legendFormat": "selected top-k"
+            }
+          ]
+        },
+        {
+          "id": 18,
+          "type": "timeseries",
+          "title": "Memory Steward \u00b7 request p95 by step",
+          "description": "Measured Memory Steward internal step p95 latency.",
+          "gridPos": {
+            "x": 8,
+            "y": 22,
+            "w": 8,
+            "h": 6
+          },
+          "datasource": {
+            "type": "postgres",
+            "uid": "memory-steward-postgres"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "gradientMode": "opacity",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "pointSize": 3,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "ms"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc",
+              "hideZeros": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "postgres",
+                "uid": "memory-steward-postgres"
+              },
+              "editorMode": "code",
+              "format": "time_series",
+              "rawQuery": true,
+              "rawSql": "SELECT date_trunc('minute',t_begin) AS time,name AS metric,percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_ms) AS value FROM telemetry.step WHERE $__timeFilter(t_begin) AND duration_ms IS NOT NULL AND ('__all' IN (${project:sqlstring}) OR project_id IN (${project:sqlstring})) GROUP BY 1,2 ORDER BY 1",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 19,
+          "type": "timeseries",
+          "title": "Gateway I/O throughput",
+          "description": "Native gateway request and response byte throughput.",
+          "gridPos": {
+            "x": 16,
+            "y": 22,
+            "w": 8,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "opacity",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "pointSize": 3,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "Bps"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc",
+              "hideZeros": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "sum by (backend) (rate(llm_gateway_request_bytes_total{project=\"llm-runtime\",backend=~\"$backend\"}[$__rate_interval]))",
+              "refId": "A",
+              "legendFormat": "{{backend}} request"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "sum by (backend) (rate(llm_gateway_response_bytes_total{project=\"llm-runtime\",backend=~\"$backend\"}[$__rate_interval]))",
+              "refId": "B",
+              "legendFormat": "{{backend}} response"
+            }
+          ]
+        },
+        {
+          "id": 20,
+          "type": "timeseries",
+          "title": "Memory Steward \u00b7 token/context accounting",
+          "description": "Memory Steward request accounting only; not a substitute for RR run-wide LLM token totals.",
+          "gridPos": {
+            "x": 0,
+            "y": 28,
+            "w": 12,
+            "h": 6
+          },
+          "datasource": {
+            "type": "postgres",
+            "uid": "memory-steward-postgres"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 8,
+                "gradientMode": "opacity",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "pointSize": 3,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc",
+              "hideZeros": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "postgres",
+                "uid": "memory-steward-postgres"
+              },
+              "editorMode": "code",
+              "format": "time_series",
+              "rawQuery": true,
+              "rawSql": "SELECT date_trunc('minute',t_begin) AS time,avg(prompt_tokens) AS value FROM telemetry.request WHERE $__timeFilter(t_begin) AND ('__all' IN (${project:sqlstring}) OR project_id IN (${project:sqlstring})) GROUP BY 1 ORDER BY 1",
+              "refId": "A",
+              "legendFormat": "prompt"
+            },
+            {
+              "datasource": {
+                "type": "postgres",
+                "uid": "memory-steward-postgres"
+              },
+              "editorMode": "code",
+              "format": "time_series",
+              "rawQuery": true,
+              "rawSql": "SELECT date_trunc('minute',t_begin) AS time,avg(completion_tokens) AS value FROM telemetry.request WHERE $__timeFilter(t_begin) AND ('__all' IN (${project:sqlstring}) OR project_id IN (${project:sqlstring})) GROUP BY 1 ORDER BY 1",
+              "refId": "B",
+              "legendFormat": "completion"
+            },
+            {
+              "datasource": {
+                "type": "postgres",
+                "uid": "memory-steward-postgres"
+              },
+              "editorMode": "code",
+              "format": "time_series",
+              "rawQuery": true,
+              "rawSql": "SELECT date_trunc('minute',t_begin) AS time,avg(static_tokens_est) AS value FROM telemetry.request WHERE $__timeFilter(t_begin) AND ('__all' IN (${project:sqlstring}) OR project_id IN (${project:sqlstring})) GROUP BY 1 ORDER BY 1",
+              "refId": "C",
+              "legendFormat": "static est."
+            },
+            {
+              "datasource": {
+                "type": "postgres",
+                "uid": "memory-steward-postgres"
+              },
+              "editorMode": "code",
+              "format": "time_series",
+              "rawQuery": true,
+              "rawSql": "SELECT date_trunc('minute',t_begin) AS time,avg(dynamic_tokens_est) AS value FROM telemetry.request WHERE $__timeFilter(t_begin) AND ('__all' IN (${project:sqlstring}) OR project_id IN (${project:sqlstring})) GROUP BY 1 ORDER BY 1",
+              "refId": "D",
+              "legendFormat": "dynamic est."
+            }
+          ]
+        },
+        {
+          "id": 21,
+          "type": "timeseries",
+          "title": "Local inference \u00b7 token rate",
+          "description": "Prompt/generation tokens per second exported by local vLLM inference tiers only; subscription-provider token totals are not exposed by the verified gateway metrics.",
+          "gridPos": {
+            "x": 12,
+            "y": 28,
+            "w": 6,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 8,
+                "gradientMode": "opacity",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "pointSize": 3,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc",
+              "hideZeros": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "sum by (tier) (rate(vllm:prompt_tokens_total{project=\"llm-runtime\",component=\"inference\"}[$__rate_interval]))",
+              "refId": "A",
+              "legendFormat": "{{tier}} prompt"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "sum by (tier) (rate(vllm:generation_tokens_total{project=\"llm-runtime\",component=\"inference\"}[$__rate_interval]))",
+              "refId": "B",
+              "legendFormat": "{{tier}} output"
+            }
+          ]
+        },
+        {
+          "id": 22,
+          "type": "timeseries",
+          "title": "LLM upstream failures",
+          "description": "Transport failures plus non-2xx upstream statuses.",
+          "gridPos": {
+            "x": 18,
+            "y": 28,
+            "w": 6,
+            "h": 6
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 12,
+                "gradientMode": "opacity",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "pointSize": 3,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "reqps"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc",
+              "hideZeros": false
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "sum by (backend, model, reason) (rate(llm_gateway_upstream_errors_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\"}[$__rate_interval]))",
+              "refId": "A",
+              "legendFormat": "{{backend}} / {{model}} / {{reason}}"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+              },
+              "expr": "sum by (backend, model, status_code) (rate(llm_gateway_upstream_requests_total{project=\"llm-runtime\",backend=~\"$backend\",model=~\"$model\",status_code=~\"4..|5..\"}[$__rate_interval]))",
+              "refId": "B",
+              "legendFormat": "{{backend}} / {{model}} / HTTP {{status_code}}"
+            }
+          ]
+        },
+        {
+          "id": 23,
+          "type": "logs",
+          "title": "RR failures / errors",
+          "description": "Failure-only RR event stream from VictoriaLogs.",
+          "gridPos": {
+            "x": 0,
+            "y": 34,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "victorialogs"
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          },
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": false
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "victorialogs"
+              },
+              "editorMode": "code",
+              "expr": "{namespace=\"rr\"} AND runId:$run_id AND (status:=\"failed\" OR detected_level:=\"error\") | fields _time,event_type,taskName,status,detected_level,error,msg,runId,project,pod,container",
+              "queryType": "instant",
+              "refId": "A",
+              "maxLines": 500
+            }
+          ]
+        },
+        {
+          "id": 24,
+          "type": "table",
+          "title": "Memory Steward \u00b7 recent failed requests",
+          "description": "Canonical Memory Steward request failures from Postgres.",
+          "gridPos": {
+            "x": 12,
+            "y": 34,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "postgres",
+            "uid": "memory-steward-postgres"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "footer": {
+                  "reducers": []
+                },
+                "inspect": false
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true,
+            "sortBy": []
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "postgres",
+                "uid": "memory-steward-postgres"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "rawSql": "SELECT request_id,t_begin,project_id,model_requested,model_sent_to_builder,http_status,error_kind,left(COALESCE(error_detail,''),240) AS error_detail FROM telemetry.request WHERE $__timeFilter(t_begin) AND ('__all' IN (${project:sqlstring}) OR project_id IN (${project:sqlstring})) AND (COALESCE(http_status,0)>=400 OR error_kind IS NOT NULL) ORDER BY t_begin DESC LIMIT 100",
+              "refId": "A"
+            }
+          ]
+        }
+      ],
+      "refresh": "5s",
+      "schemaVersion": 40,
+      "tags": [
+        "oco",
+        "rr",
+        "relentless-rekrow",
+        "live",
+        "ai-runtime",
+        "memory-steward"
+      ],
+      "templating": {
+        "list": [
+          {
+            "name": "project",
+            "label": "Memory project",
+            "type": "query",
+            "datasource": {
+              "type": "postgres",
+              "uid": "memory-steward-postgres"
+            },
+            "definition": "SELECT project_id AS __text, project_id AS __value FROM (SELECT project_id FROM telemetry.request UNION SELECT project_id FROM dynamic_memory UNION SELECT project_id FROM admission_decision UNION SELECT project_id FROM agent_outcome_submission) p ORDER BY 1",
+            "query": "SELECT project_id AS __text, project_id AS __value FROM (SELECT project_id FROM telemetry.request UNION SELECT project_id FROM dynamic_memory UNION SELECT project_id FROM admission_decision UNION SELECT project_id FROM agent_outcome_submission) p ORDER BY 1",
+            "refresh": 2,
+            "includeAll": true,
+            "multi": true,
+            "allValue": "__all",
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "options": [],
+            "regex": "",
+            "sort": 1
+          },
+          {
+            "name": "run_id",
+            "label": "RR run ID",
+            "type": "textbox",
+            "query": "",
+            "current": {
+              "text": "",
+              "value": ""
+            },
+            "options": []
+          },
+          {
+            "name": "backend",
+            "label": "Gateway backend",
+            "type": "query",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "victoriametrics"
+            },
+            "query": {
+              "query": "label_values(llm_gateway_upstream_requests_total{project=\"llm-runtime\"}, backend)",
+              "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            },
+            "definition": "label_values(llm_gateway_upstream_requests_total{project=\"llm-runtime\"}, backend)",
+            "includeAll": true,
+            "multi": true,
+            "refresh": 2,
+            "sort": 1,
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "allValue": ".*",
+            "options": [],
+            "regex": ""
+          },
+          {
+            "name": "model",
+            "label": "Model",
+            "type": "query",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "victoriametrics"
+            },
+            "query": {
+              "query": "label_values(llm_gateway_upstream_requests_total{project=\"llm-runtime\",backend=~\"$backend\"}, model)",
+              "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            },
+            "definition": "label_values(llm_gateway_upstream_requests_total{project=\"llm-runtime\",backend=~\"$backend\"}, model)",
+            "includeAll": true,
+            "multi": true,
+            "refresh": 2,
+            "sort": 1,
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "allValue": ".*",
+            "options": [],
+            "regex": ""
+          }
+        ]
+      },
+      "time": {
+        "from": "now-2h",
+        "to": "now"
+      },
+      "timepicker": {
+        "refresh_intervals": [
+          "5s",
+          "10s",
+          "30s",
+          "1m",
+          "5m"
+        ]
+      },
+      "timezone": "browser",
+      "title": "RR \u00b7 Live Run",
+      "uid": "oco-rr-live-run",
+      "version": 1,
+      "weekStart": "",
+      "style": "dark"
+    }
+

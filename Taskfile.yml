@@ -18,9 +18,27 @@ tasks:
         --dry-run=client -o yaml | kubectl apply -f -
 
   up:
-    desc: Deploy the observability console
+    desc: Reconcile the observability console and verify the OCO AI Runtime dashboard
     cmds:
       - kubectl apply -k k8s
+      - kubectl -n observability-console rollout status deployment/grafana --timeout=120s
+      - |
+        set -eu
+        kubectl -n observability-console get configmap/oco-ai-runtime-dashboard >/dev/null
+        for _ in $(seq 1 30); do
+          if kubectl -n observability-console exec deployment/grafana -c grafana --             test -f /var/lib/grafana/dashboards/ai-runtime-operations.json             && kubectl -n observability-console exec deployment/grafana -c grafana -- sh -ec '
+              curl -fsS                 --user "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD"                 http://127.0.0.1:3000/api/dashboards/uid/oco-ai-runtime-operations                 >/dev/null
+            '; then
+            echo "OK: AI Runtime Operations dashboard is provisioned"
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "FAIL: AI Runtime Operations dashboard was not provisioned" >&2
+        kubectl -n observability-console exec deployment/grafana -c grafana --           ls -la /var/lib/grafana/dashboards >&2 || true
+        kubectl -n observability-console logs deployment/grafana -c sidecar-dashboards --tail=120 >&2 || true
+        kubectl -n observability-console logs deployment/grafana -c grafana --tail=120 >&2 || true
+        exit 1
 
   down:
     desc: Delete the observability console

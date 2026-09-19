@@ -89,7 +89,7 @@ spec:
             - name: FOLDER
               value: /etc/grafana/provisioning/datasources
             - name: NAMESPACE
-              value: llm-runtime,host-runtime,rr,ms
+              value: host-runtime,rr,ms
             - name: REQ_URL
               value: http://127.0.0.1:3000/api/admin/provisioning/datasources/reload
             - name: REQ_METHOD
@@ -122,7 +122,7 @@ spec:
             - name: FOLDER
               value: /var/lib/grafana/dashboards
             - name: NAMESPACE
-              value: observability-console,llm-runtime,host-runtime,rr,ms
+              value: observability-console,host-runtime,rr,ms
             - name: REQ_URL
               value: http://127.0.0.1:3000/api/admin/provisioning/dashboards/reload
             - name: REQ_METHOD
