@@ -144,26 +144,16 @@ data:
         target_label  = "project"
       }
 
-      rule {
-        source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
-        separator     = "/"
-        target_label  = "__path__"
-        replacement   = "/var/log/pods/*_$1/$2/*.log"
-      }
     }
 
-    local.file_match "pod_logs" {
-      path_targets = discovery.relabel.pod_logs.output
-    }
-
-    loki.source.file "pod_logs" {
-      targets       = local.file_match.pod_logs.targets
-      tail_from_end = true
-      forward_to    = [loki.process.pod_logs.receiver]
+    // Read Pod stdout/stderr through the Kubernetes API. This avoids missing
+    // short-lived Jobs before the node log file tailer attaches.
+    loki.source.kubernetes "pod_logs" {
+      targets    = discovery.relabel.pod_logs.output
+      forward_to = [loki.process.pod_logs.receiver]
     }
 
     loki.process "pod_logs" {
-      stage.cri {}
 
       stage.labels {
         values = {
