@@ -1,0 +1,13 @@
+diff --git a/k8s/backend/alloy.yml b/k8s/backend/alloy.yml
+index 91dc935..347a8c2 100644
+--- a/k8s/backend/alloy.yml
++++ b/k8s/backend/alloy.yml
+@@ -9,7 +9,7 @@
+       // the central Alloy ingress and must not also be tailed here.
+       rule {
+         source_labels = ["__meta_kubernetes_namespace"]
+-        regex         = "ms"
++        regex         = "^(ms|llm-runtime)$"
+         action        = "drop"
+       }
+ 

@@ -35,6 +35,19 @@ data:
         ]
       }
 
+      // VictoriaLogs flattens OTLP resource and log attributes into one field
+      // namespace. Keep the resource copy for configured stream fields and
+      // drop duplicate record-level copies before export.
+      log_statements {
+        context = "log"
+        statements = [
+          `delete_key(attributes, "project") where resource.attributes["project"] != nil`,
+          `delete_key(attributes, "service.name") where resource.attributes["service.name"] != nil`,
+          `delete_key(attributes, "k8s.namespace.name") where resource.attributes["k8s.namespace.name"] != nil`,
+          `delete_key(attributes, "deployment.environment.name") where resource.attributes["deployment.environment.name"] != nil`,
+        ]
+      }
+
       output {
         metrics = [otelcol.processor.batch.shared.input]
         logs    = [otelcol.processor.batch.shared.input]
@@ -108,7 +121,7 @@ data:
       // the central Alloy ingress and must not also be tailed here.
       rule {
         source_labels = ["__meta_kubernetes_namespace"]
-        regex         = "ms"
+        regex         = "^(ms|llm-runtime)$"
         action        = "drop"
       }
 

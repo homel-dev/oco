@@ -33,6 +33,7 @@ spec:
             - -retentionPeriod=30d
             - -storage.minFreeDiskSpaceBytes=10GiB
             - -httpListenAddr=:8428
+            - -maxLabelsPerTimeseries=64
           ports:
             - name: http
               containerPort: 8428
