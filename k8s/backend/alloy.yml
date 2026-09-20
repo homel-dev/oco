@@ -144,16 +144,26 @@ data:
         target_label  = "project"
       }
 
+      rule {
+        source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+        separator     = "/"
+        target_label  = "__path__"
+        replacement   = "/var/log/pods/*$1/*.log"
+      }
     }
 
-    // Read Pod stdout/stderr through the Kubernetes API. This avoids missing
-    // short-lived Jobs before the node log file tailer attaches.
-    loki.source.kubernetes "pod_logs" {
-      targets    = discovery.relabel.pod_logs.output
-      forward_to = [loki.process.pod_logs.receiver]
+    local.file_match "pod_logs" {
+      path_targets = discovery.relabel.pod_logs.output
+    }
+
+    loki.source.file "pod_logs" {
+      targets       = local.file_match.pod_logs.targets
+      tail_from_end = true
+      forward_to    = [loki.process.pod_logs.receiver]
     }
 
     loki.process "pod_logs" {
+      stage.docker {}
 
       stage.labels {
         values = {
@@ -265,6 +275,9 @@ spec:
             - name: container-logs
               mountPath: /var/log/containers
               readOnly: true
+            - name: docker-containers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
       volumes:
         - name: config
           configMap:
@@ -278,6 +291,10 @@ spec:
         - name: container-logs
           hostPath:
             path: /var/log/containers
+            type: Directory
+        - name: docker-containers
+          hostPath:
+            path: /var/lib/docker/containers
             type: Directory
 ---
 apiVersion: v1
