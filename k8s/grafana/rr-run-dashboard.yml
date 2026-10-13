@@ -1,0 +1,2030 @@
+diff --git a/docs/README.md b/docs/README.md
+index f1b3b9b..e1f196f 100644
+--- a/docs/README.md
++++ b/docs/README.md
+@@ -7,143 +7,105 @@ authority: documentation-index
+ 
+ # UNICOP Control Plane Operator — Documentation
+ 
+-This directory contains the canonical planner-visible documentation for the
+-UNICOP Control Plane Operator.
++This directory contains the canonical planner-visible contract for the UNICOP
++Control Plane Operator.
+ 
+-The documentation in this directory defines:
+-
+-- operator responsibilities and non-responsibilities
+-- accepted implementation scope
+-- Custom Resource schema contracts
+-- lifecycle and reconciliation semantics
+-- status and failure semantics
+-- repository-local implementation and verification rules
+-
+-These documents are engineering contracts, not tutorials.
+-
+----
++The accepted implementation is Flux-oriented: `UnicopControlPlane` remains the
++product API, while Flux Operator performs generic staged reconciliation. The
++UNICOP process is intentionally thin and owns only domain-specific adaptation
++that Flux does not provide directly.
+ 
+ ## Documentation Authority
+ 
+-Only documents with the following frontmatter are planner-visible:
+-
+-```yaml
+-planner_source: true
+-```
+-
+-Documents without `planner_source: true` are not authoritative for automated
+-planning.
+-
+-Archived notes, historical plans, TODO lists, roadmaps, and speculative design
+-documents MUST NOT be used as planner input.
+-
+----
++Only documents with `planner_source: true` are authoritative planner input.
++Historical notes, TODOs, roadmaps, experiments, and non-canonical design files
++MUST NOT override these documents.
+ 
+ ## Canonical Documents
+ 
+ ### `docs/specification.md`
+ 
+-Defines the runtime behavior contract for the operator.
+-
+-This document owns:
++Owns runtime behavior:
+ 
+-- accepted operator scope
+-- Custom Resource identity
+-- lifecycle semantics
+-- managed Kubernetes resources
+-- status contract
+-- failure model
+-- security and secret-handling rules
+-- end-state definition
++- `UnicopControlPlane` API identity and accepted spec/status contract
++- Flux-oriented runtime architecture
++- staged lifecycle and dependency gates
++- bootstrap secret semantics
++- component readiness and failure/recovery semantics
++- ownership and deletion behavior
++- accepted end state and out-of-scope behavior
+ 
+ ### `docs/implementation-contract.md`
+ 
+-Defines repository-local implementation rules for the current Go /
+-controller-runtime codebase.
++Owns repository-local implementation rules:
+ 
+-This document owns:
+-
+-- current repository layout
+-- package responsibilities
+-- generation and manifest closure rules
+-- local command contract
+-- CI alignment rules
+-- planner decomposition boundaries
+-
+----
++- thin adapter-controller responsibilities
++- Flux `ResourceSet` materialization boundary
++- package and manifest ownership
++- generated artifact closure
++- local verification and CI contract
++- planner decomposition rules for the refactor
+ 
+ ## Conflict Resolution
+ 
+-If documents appear to conflict:
++If documents conflict:
+ 
+ 1. `docs/specification.md` wins for runtime behavior.
+-2. `docs/implementation-contract.md` wins for repository layout, package
+-   ownership, build, generation, and local verification.
+-3. Generated artifacts must match their declared source files.
+-4. Repository inventory wins over speculative or missing paths.
+-5. Future architecture ideas are not binding unless added to a canonical
+-   planner-visible document.
++2. `docs/implementation-contract.md` wins for repository layout, generation,
++   build, and verification.
++3. Generated artifacts must match their declared sources.
++4. Repository inventory wins over speculative paths.
++5. Future architecture is not binding unless promoted into these canonical
++   documents.
+ 
+----
++## Product Boundary
+ 
+-## Documentation Rules
++The product is not a replacement for Flux reconciliation machinery.
+ 
+-- No speculative behavior in canonical documents.
+-- No undocumented runtime behavior.
+-- No environment-specific assumptions.
+-- No hidden defaults.
+-- No references to missing files as if they already exist.
+-- No roadmap items in planner-visible specification files.
+-- No documentation update may claim implemented behavior unless the
+-  corresponding implementation exists or the objective is explicitly
+-  documentation-only.
++Flux Operator owns generic concerns including:
+ 
+----
++- ordered staged apply
++- health waiting and dependency gates
++- reconciliation retry
++- drift correction
++- managed-object inventory
++- garbage collection
++- reconciliation conditions, events, and history
+ 
+-## Accepted Documentation Set
++UNICOP owns only domain-specific concerns including:
+ 
+-The accepted planner-visible documentation set is:
++- the `UnicopControlPlane` public API
++- translation of that API into Flux reconciliation input
++- bootstrap secret generate-once/preserve-existing behavior
++- projection of domain component state into `UnicopControlPlane.status`
+ 
+-```text
+-docs/README.md
+-docs/specification.md
+-docs/implementation-contract.md
+-```
++No custom phase engine, generic apply engine, generic wait engine, generic
++retry engine, or generic garbage collector is accepted unless a canonical
++specification change explicitly demonstrates that Flux cannot satisfy the
++required behavior.
+ 
+-No other document is required for the planner to produce bounded execution
+-slices for the current repository.
++## Accepted Planner-Visible Set
+ 
+----
++The complete accepted planner-visible set is:
+ 
+-## Relationship to Other Repositories
++- `docs/README.md`
++- `docs/specification.md`
++- `docs/implementation-contract.md`
+ 
+-This documentation describes only the UNICOP Control Plane Operator repository.
+-
+-It does not define:
+-
+-- UNICOP domain models
+-- application business logic
+-- cloud provider integrations
+-- external Security-IaC repositories
+-- external secret-management repositories
+-- external event-processing repositories
+-
+-Those concerns may be integrated later only through explicit documented
+-contracts.
+-
+----
++No other document is required to plan the current Flux refactor.
+ 
+ ## Change Policy
+ 
+-Any change to operator behavior requires:
++A runtime behavior change requires:
+ 
+-1. documentation update in the canonical document that owns the behavior
+-2. implementation update in the corresponding source files
+-3. local verification that the repository remains internally consistent
++1. a canonical documentation change
++2. implementation changes in the owning source surface
++3. local verification of the changed contract
+ 
+-Documentation drives implementation, but documentation MUST NOT describe
+-unimplemented runtime behavior as accepted behavior.
++Canonical documentation may intentionally describe the target state of a
++refactor objective before runtime code has been changed, provided the planner
++objective is explicitly implementing that documented target state.
+ 
+ ---
+ 
+-END OF DOCUMENTATION OVERVIEW
+\ No newline at end of file
++END OF DOCUMENTATION OVERVIEW
+diff --git a/docs/implementation-contract.md b/docs/implementation-contract.md
+index cab3b1a..f162b1e 100644
+--- a/docs/implementation-contract.md
++++ b/docs/implementation-contract.md
+@@ -7,590 +7,419 @@ authority: implementation-contract
+ 
+ # UNICOP Control Plane Operator
+ 
+-## Go Implementation Contract
++## Flux-Oriented Implementation Contract
+ 
+-SCOPE: Current repository-local implementation rules  
+-AUDIENCE: UNICOP engineers and automated planner/executor systems  
+-DOCUMENT TYPE: Repository implementation contract  
+-
+----
+-
+-## Navigation
+-
+-- [0. Document Contract](#0-document-contract)
+-- [1. Current Repository Model](#1-current-repository-model)
+-- [2. Repository Layout](#2-repository-layout)
+-- [3. Package Responsibilities](#3-package-responsibilities)
+-- [4. Generated Artifact Contract](#4-generated-artifact-contract)
+-- [5. Local Command Contract](#5-local-command-contract)
+-- [6. CI Contract](#6-ci-contract)
+-- [7. Planner Decomposition Contract](#7-planner-decomposition-contract)
+-- [8. Verification Contract](#8-verification-contract)
+-- [9. Forbidden Planner Assumptions](#9-forbidden-planner-assumptions)
+-- [10. Accepted Objective Surface Groups](#10-accepted-objective-surface-groups)
+-
+----
++SCOPE: Repository-local implementation rules for the Flux refactor
++AUDIENCE: UNICOP engineers and automated planner/executor systems
++DOCUMENT TYPE: Repository implementation contract
+ 
+ ## 0. Document Contract
+ 
+-This document defines the accepted implementation structure for the current Go
+-controller-runtime repository.
+-
+-This document owns repository-local implementation rules.
+-
+-It does not define product runtime behavior. Runtime behavior is defined by:
++Runtime behavior is owned by `docs/specification.md`.
+ 
+-```text
+-docs/specification.md
+-```
++This document owns repository structure, source responsibilities, manifest
++closure, generation, verification, and planner decomposition.
+ 
+-If this document conflicts with `docs/specification.md`, the specification wins
+-for runtime behavior and this document wins for repository layout, command
+-surface, generation closure, and local verification.
+-
+----
++The current objective is an explicit architecture refactor. Planner output MUST
++therefore target the Flux-oriented model in the specification rather than
++preserve the legacy direct child-resource reconciler.
+ 
+-## 1. Current Repository Model
++## 1. Target Repository Model
+ 
+-The current repository model is:
++The target repository model is:
+ 
+-```text
+-single controller-runtime manager
+-single root UnicopControlPlane reconciler
+-helper packages under internal/
+-generated API and CRD artifacts
+-repository-local verification through Go and Make commands
+-```
++- one controller-runtime manager
++- one thin `UnicopControlPlane` adapter reconciler
++- one `UnicopControlPlane` public CRD
++- one deterministic Flux ResourceSet per parent instance
++- bootstrap Secret handling in UNICOP code
++- workload reconciliation in Flux Operator
++- domain status projection in UNICOP code
++- generated API/CRD artifacts
++- repository-local verification through Go/Make commands
+ 
+-The current accepted implementation model is not:
++The target implementation is not:
+ 
+-```text
+-phase-engine architecture
+-component-reconciler architecture
+-external orchestrator architecture
+-multi-controller architecture
+-```
+-
+-The planner MUST preserve the current repository model unless the user
+-explicitly asks for a refactor.
+-
+----
++- a custom generic phase engine
++- a custom generic apply engine
++- a custom generic wait/retry engine
++- a component reconciler framework for PostgreSQL/Redis/NetBox
++- a replacement for Flux inventory/GC
++- an external imperative orchestrator
+ 
+ ## 2. Repository Layout
+ 
+-Accepted current repository layout:
+-
+-```text
+-.github/workflows/
+-api/v1alpha1/
+-cmd/operator/
+-config/crd/
+-config/samples/
+-docs/
+-internal/controller/
+-internal/errors/
+-internal/k8s/
+-internal/otel/
+-internal/runtime/
+-internal/status/
+-internal/util/
+-go.mod
+-go.sum
+-README.md
+-```
+-
+-Optional repository-local tooling paths that may be added:
+-
+-```text
+-Makefile
+-hack/tools.go
+-hack/boilerplate.go.txt
+-```
+-
+-Optional Kubernetes config paths that may be added only when the objective owns
+-their full closure:
+-
+-```text
+-config/rbac/
+-config/manager/
+-config/default/
+-```
+-
+-The planner MUST NOT assume the following paths exist unless they appear in
+-repository inventory or the objective explicitly creates them:
+-
+-```text
+-internal/engine/
+-internal/phases/
+-internal/dependencies/
+-internal/components/
+-controllers/
+-pkg/
+-test/e2e/
+-```
+-
+----
++Existing repository paths remain valid when present:
++
++- `.github/workflows/`
++- `api/v1alpha1/`
++- `cmd/operator/`
++- `config/crd/`
++- `config/samples/`
++- `docs/`
++- `internal/controller/`
++- `internal/errors/`
++- `internal/k8s/`
++- `internal/otel/`
++- `internal/runtime/`
++- `internal/status/`
++- `internal/util/`
++- `go.mod`
++- `go.sum`
++- `README.md`
++
++The Flux refactor may add bounded implementation surfaces when required, for
++example:
++
++- `internal/flux/` for ResourceSet construction/adaptation
++- `internal/bootstrap/` for generate-once Secret behavior
++- `config/rbac/`
++- `config/manager/`
++- `config/default/`
++- `Makefile`
++- pinned tooling under `hack/`
++
++Planner output MUST NOT invent broad framework directories such as
++`internal/engine/`, `internal/phases/`, or `internal/components/` merely to
++recreate orchestration that Flux already provides.
+ 
+ ## 3. Package Responsibilities
+ 
+ ### 3.1 `api/v1alpha1/`
+ 
+-Owns Kubernetes API types for:
++Owns:
+ 
+-```text
+-UnicopControlPlane
+-UnicopControlPlaneList
+-UnicopControlPlaneSpec
+-UnicopControlPlaneStatus
+-component state structs
+-nested spec structs
+-group/version registration
+-generated deepcopy output
+-```
++- `UnicopControlPlane`
++- `UnicopControlPlaneList`
++- spec/status/component structs
++- Kubebuilder validation/default markers
++- group/version registration
++- generated deepcopy output
+ 
+-Rules:
+-
+-- API structs must match generated CRD schema.
+-- Kubebuilder markers must remain close to the types they govern.
+-- Generated deepcopy files must not be edited manually.
+-- API changes that require generation must include generated output in the same
+-  execution slice or explicitly defer generation without claiming generated
+-  closure.
++API structs and generated CRD schema MUST remain aligned.
+ 
+ ### 3.2 `cmd/operator/`
+ 
+-Owns process bootstrap only.
+-
+-Responsibilities:
+-
+-- parse process flags
+-- initialize runtime scheme
+-- initialize controller-runtime manager
+-- register API scheme
+-- register controller
+-- configure metrics and health probes
+-- start manager
++Owns process bootstrap only:
+ 
+-Forbidden:
++- flags
++- scheme registration
++- controller-runtime manager
++- controller registration
++- metrics/probes/leader election
++- manager start
+ 
+-- reconciliation logic
+-- managed resource construction
+-- dependency-specific logic
+-- status mutation logic
++It MUST NOT contain lifecycle sequencing, ResourceSet construction, Secret
++mutation, or status business logic.
+ 
+ ### 3.3 `internal/controller/`
+ 
+-Owns root reconciliation.
+-
+-Responsibilities:
++Owns root adaptation reconciliation:
+ 
+ - watch `UnicopControlPlane`
+-- watch owned child resources
+-- fetch the parent resource
+-- calculate defaults documented in `docs/specification.md`
+-- ensure managed Kubernetes resources
+-- set owner references
+-- apply readiness gates
+-- update status
+-- return visible Kubernetes API errors
++- fetch/default/validate parent input
++- call bootstrap Secret helper
++- construct/apply the corresponding ResourceSet through the Flux adapter
++- observe ResourceSet and child workload state
++- project domain status
++- return explicit API/adaptation errors
+ 
+-Forbidden:
++It MUST NOT directly reconcile PostgreSQL, Redis, migrations, web, or worker
++objects after the Flux refactor is complete.
+ 
+-- undocumented components
+-- speculative future integrations
+-- unrelated Kubernetes object mutation
+-- silent failure paths
++It MUST NOT contain polling loops that duplicate Flux health waiting.
+ 
+-### 3.4 `internal/status/`
++### 3.4 `internal/flux/`
+ 
+-Owns status construction helpers.
++May be added as the narrow Flux integration surface.
+ 
+ Responsibilities:
+ 
+-- component state helpers
+-- top-level phase helpers
+-- stable status mutation utilities
+-
+-Rules:
+-
+-- status helpers must match the API status schema.
+-- helpers must not invent status fields that do not exist in API types.
+-
+-### 3.5 `internal/k8s/`
+-
+-Owns generic Kubernetes helper functions.
+-
+-Responsibilities may include:
+-
+-- apply or create/update helpers
+-- wait helpers
+-- owner reference helpers
+-- finalizer helpers
+-
+-Rules:
+-
+-- generic helpers only
+-- no NetBox/Postgres/Redis business logic
+-- no status mutation
+-- no secret logging
+-
+-### 3.6 `internal/errors/`
+-
+-Owns typed repository-local error helpers.
+-
+-Rules:
+-
+-- errors must be explicit
+-- errors must support visible reconciliation outcomes
+-- errors must not hide failure cause
+-
+-### 3.7 `internal/util/`
+-
+-Owns side-effect-limited generic helpers.
+-
+-Accepted helper categories:
++- deterministic ResourceSet naming
++- ResourceSet object construction
++- mapping `UnicopControlPlane.spec` into ResourceSet inputs/templates
++- ordered step definition
++- labels/ownership metadata
++- Flux-specific readiness/status interpretation helpers where necessary
+ 
+-- retry
+-- backoff
+-- secret reference parsing
+-
+-Rules:
+-
+-- no Kubernetes object ownership logic
+-- no status mutation
+-- no direct secret value logging
+-
+-### 3.8 `internal/otel/`
+-
+-Owns observability bootstrap helpers only.
++Forbidden:
+ 
+-Rules:
++- Secret generation
++- domain status mutation
++- generic Kubernetes reconciliation framework code
++- unrelated Flux administration
+ 
+-- no reconciliation logic
+-- no managed resource mutation
++### 3.5 `internal/bootstrap/`
+ 
+-### 3.9 `internal/runtime/`
++May be added for bootstrap Secret semantics.
+ 
+-Owns runtime constants or runtime support helpers only.
++Responsibilities:
+ 
+-Rules:
++- create Secret when absent
++- generate only missing/empty required values
++- preserve existing non-empty values
++- expose explicit errors
+ 
+-- no reconciliation logic
+-- no managed resource mutation
+-- no hidden configuration behavior
++Forbidden:
+ 
+----
++- logging secret values
++- status mutation
++- PostgreSQL/Redis/NetBox workload reconciliation
+ 
+-## 4. Generated Artifact Contract
++### 3.6 `internal/status/`
+ 
+-Generated artifacts must be reproducible.
++Owns domain status projection helpers.
+ 
+-Source paths:
++Status MUST be derived from observed Flux/Kubernetes state and the state model
++in `docs/specification.md`.
+ 
+-```text
+-api/v1alpha1/
+-```
++Status helpers MUST NOT maintain an independent hidden lifecycle engine.
+ 
+-Generated paths:
++### 3.7 `internal/k8s/`
+ 
+-```text
+-api/v1alpha1/zz_generated.deepcopy.go
+-config/crd/
+-```
++May retain small generic Kubernetes helpers still required by the adapter, such
++as safe create/update helpers for the parent-owned Secret or owner-reference
++helpers.
+ 
+-Generation tools must be pinned before generated-output stability is claimed.
++Legacy helpers whose only purpose was direct workload apply/wait orchestration
++SHOULD be deleted once no longer referenced.
+ 
+-If `controller-gen` is used, the repository must define how the expected
+-version is installed or invoked.
++### 3.8 Other `internal/` packages
+ 
+-Generated artifact objectives must include every source and generated path they
+-claim to validate.
++`internal/errors/`, `internal/util/`, `internal/otel/`, and `internal/runtime/`
++remain narrow support packages. They MUST NOT become an alternate orchestration
++engine.
+ 
+-A slice that changes API types and claims generated closure must include:
++## 4. ResourceSet Construction Contract
+ 
+-```text
+-api/v1alpha1/
+-config/crd/
+-```
++One parent `UnicopControlPlane` maps to one deterministic ResourceSet.
+ 
+-A slice that changes only generated command wiring may include command files
+-without claiming generated output stability.
++The ResourceSet MUST implement ordered stages equivalent to:
+ 
+----
++1. PostgreSQL
++2. Redis
++3. migrations
++4. web
++5. worker
+ 
+-## 5. Local Command Contract
++The bootstrap Secret is ensured before the ResourceSet is allowed to progress.
+ 
+-The repository should expose a local command surface through `Makefile`.
++Each stage MUST contain only resources belonging to that stage and MUST use
++Flux health/wait semantics to block the next stage until the current stage is
++healthy.
+ 
+-Accepted targets:
++The migrations stage MUST use Job semantics that permit a failed migration to
++be retried/recreated according to the runtime specification instead of leaving
++the installation permanently stuck behind an immutable failed Job.
+ 
+-```text
+-make generate
+-make manifests
+-make fmt
+-make vet
+-make test
+-make build
+-make ci
+-```
++ResourceSet rendering MUST be deterministic for unchanged parent spec and
++bootstrap Secret references.
+ 
+-Expected target semantics:
++Secret values MUST NOT be copied into ResourceSet metadata or rendered as
++plain-text template input when a Secret reference can be used instead.
+ 
+-```text
+-make generate
+-```
++## 5. Flux Dependency Contract
+ 
+-Regenerates deepcopy and CRD artifacts as applicable.
++The implementation may import the Flux API packages necessary to construct and
++inspect ResourceSet objects.
+ 
+-```text
+-make manifests
+-```
++Dependency versions MUST be explicit in `go.mod`/`go.sum`.
+ 
+-Regenerates CRD manifests under `config/crd/`.
++The initial refactor MUST target public Flux/Flux Operator APIs. Forking or
++patching Flux is not part of the first implementation objective set.
+ 
+-```text
+-make fmt
+-```
++If implementation proves a concrete reusable capability gap, that gap MUST be
++recorded separately before an upstream contribution objective is created.
+ 
+-Formats Go source.
++## 6. Generated Artifact Contract
+ 
+-```text
+-make vet
+-```
++Generated artifacts must be reproducible.
+ 
+-Runs `go vet ./...`.
++Sources include:
+ 
+-```text
+-make test
+-```
++- `api/v1alpha1/`
+ 
+-Runs `go test ./...`.
++Generated outputs include:
+ 
+-```text
+-make build
+-```
++- `api/v1alpha1/zz_generated.deepcopy.go`
++- `config/crd/`
+ 
+-Builds the operator binary or package set.
++If API types or markers change, generated output belongs to the same execution
++slice or the slice must explicitly state that generation is deferred and may
++not claim closure.
+ 
+-```text
+-make ci
+-```
++Generation tool versions must be pinned before generated-output stability is
++claimed.
+ 
+-Runs the repository-local verification sequence expected by CI.
++## 7. Kubernetes Manifest Contract
+ 
+-A planner objective that introduces or modifies these targets must include:
++The repository may add manifests needed to run the thin adapter controller,
++including RBAC and manager deployment resources.
+ 
+-```text
+-Makefile
+-```
++RBAC MUST cover only the API surfaces actually required, including:
+ 
+-and any directly required tooling files.
++- `UnicopControlPlane` and status
++- parent-owned bootstrap Secrets
++- Flux ResourceSet resources
++- read access required to project accepted component state
+ 
+----
++The repository MUST NOT silently install or vendor the entire Flux runtime as
++opaque generated YAML unless that installation surface is explicitly owned by
++a bounded objective.
+ 
+-## 6. CI Contract
++Runtime prerequisite documentation/checks for Flux are acceptable.
+ 
+-The repository contains GitHub Actions CI when `.github/workflows/` is present
+-in repository inventory.
++## 8. Local Command Contract
+ 
+-CI must invoke repository-local commands where practical.
++The repository SHOULD expose:
+ 
+-CI must not define a command path that does not exist locally.
++- `make generate`
++- `make manifests`
++- `make fmt`
++- `make vet`
++- `make test`
++- `make build`
++- `make ci`
+ 
+-If CI invokes generation, the corresponding local Make target must exist or be
+-created in the same execution slice.
++Where integration tests are added, an explicit target such as
++`make test-integration` may be added. Such tests MUST clearly distinguish local
++API/envtest verification from live-cluster verification.
+ 
+-If the repository does not expose `.github/workflows/`, planner output must not
+-invent GitHub Actions.
++CI SHOULD invoke repository-local commands instead of duplicating command logic
++inside workflow YAML.
+ 
+-If the repository does not expose `.gitlab-ci.yml`, planner output must not
+-invent GitLab CI.
++## 9. Verification Contract
+ 
+----
++Every implementation slice must have local verification appropriate to its
++surface.
+ 
+-## 7. Planner Decomposition Contract
++Accepted checks include:
+ 
+-For this repository class, a valid `READY_FOR_SUMMARY_REVIEW` planner
+-decomposition must contain bounded execution slices.
++- `gofmt`
++- `go mod tidy`
++- `go vet ./...`
++- `go test ./...`
++- `go build ./...`
++- `make generate`
++- `make manifests`
++- generated-file diff checks
++- controller/envtest tests
++- pure tests of ResourceSet rendering and state projection
+ 
+-A valid decomposition for the current repository should usually contain:
++Live-cluster tests MUST NOT be required by an ordinary coder objective unless
++the execution environment explicitly provides the cluster and the objective is
++specifically an integration/e2e slice.
+ 
+-```text
+-10 to 18 objectives
+-```
++## 10. Required Test Surfaces
+ 
+-Fewer than 10 objectives is invalid unless the planner returns:
++The Flux refactor SHOULD establish automated coverage for at least:
+ 
+-```text
+-NEEDS_CLARIFICATION
+-UNSUITABLE_FOR_EXECUTION
+-```
++- deterministic ResourceSet rendering
++- ordered stage definitions
++- parent-to-ResourceSet ownership/name mapping
++- bootstrap Secret create
++- bootstrap Secret preserve-existing
++- bootstrap Secret fill-only-missing
++- status mapping for Progressing/Blocked/Ready/Error
++- failed migrations represented as Error with later stages Blocked
++- recovery mapping after dependency recovery
++- deletion/ownership expectations that can be verified without a live cluster
+ 
+-Each objective must be:
++The final integration objective MUST reference the lifecycle acceptance matrix
++in `docs/specification.md`.
+ 
+-- file-bounded
+-- independently verifiable
+-- coherent as one execution slice
+-- small enough for a weak local coder model
+-- grounded in current repository inventory
+-- free of dangling references to future objectives
+-- explicit about generated files when generation is claimed
++## 11. Planner Decomposition Contract
+ 
+-Each objective should usually touch no more than:
++The planner MUST decompose this refactor into bounded execution slices rather
++than one broad "replace operator with Flux" objective.
+ 
+-```text
+-1 to 5 primary files
+-```
++A reasonable target is approximately 8–14 objectives, adjusted to actual
++repository inventory after implementation begins.
+ 
+-Generated files may be included when mechanically tied to the primary source
+-files.
++Expected objective families are:
+ 
+----
++1. Flux dependency/API baseline
++2. API/default/schema alignment where required
++3. bootstrap Secret helper and tests
++4. ResourceSet model/rendering helper
++5. PostgreSQL/Redis staged resources
++6. migrations stage and retry semantics
++7. web/worker stages
++8. root adapter reconciler conversion
++9. status projection conversion
++10. RBAC/manager/sample manifests
++11. generation/local command/CI closure
++12. integration and lifecycle-matrix verification
++13. removal of obsolete legacy direct-reconciliation helpers
+ 
+-## 8. Verification Contract
+-
+-Valid repository-local verification expectations include:
+-
+-```text
+-gofmt -w <specific paths>
+-gofmt -l <specific paths>
+-go mod tidy
+-go vet ./...
+-go test ./...
+-go build ./...
+-go build ./cmd/operator
+-make generate
+-make manifests
+-make fmt
+-make vet
+-make test
+-make build
+-make ci
+-git diff --exit-code <generated paths>
+-```
+-
+-Invalid verification expectations include:
+-
+-```text
+-live Kubernetes cluster access
+-cloud credentials
+-private registry credentials
+-production secrets
+-manual review as the only verification
+-internet-only behavior unless the runtime explicitly provides network access
+-```
+-
+-A planner objective must not require live cluster access unless the user
+-explicitly provides that runtime.
++The planner may merge adjacent families when the actual file surface is small,
++but MUST NOT combine unrelated runtime behavior into a single oversized slice.
+ 
+----
++Each objective should normally touch no more than 1–5 primary files plus
++mechanically generated outputs.
+ 
+-## 9. Forbidden Planner Assumptions
++## 12. Forbidden Planner Assumptions
+ 
+ Planner output MUST NOT assume:
+ 
+-- Vault is implemented
+-- Kafka is implemented
+-- EDA is implemented
+-- AWX is implemented
+-- finalizer teardown is implemented
+-- mandatory namespace enforcement is implemented
+-- single-instance cluster enforcement is implemented
+-- `internal/engine/` exists
+-- `internal/phases/` exists
+-- `internal/dependencies/` exists
+-- `internal/components/` exists
+-- CI exists unless CI files are present in repository inventory
+-- generated artifacts are stable unless generation is locally verifiable
+-- Make targets exist unless `Makefile` exists or the objective creates it
+-
+-Planner output MUST NOT create broad milestone objectives such as:
+-
+-```text
+-Implement the operator
+-Build Kubernetes infrastructure
+-Add all manifests
+-Create full reconciliation engine
+-Add CI/CD
+-Implement all dependencies
+-Wire the control plane end to end
+-```
+-
+-Those must be split into bounded file-surface objectives.
+-
+----
+-
+-## 10. Accepted Objective Surface Groups
+-
+-Valid planner objectives should map to one narrow surface group.
+-
+-Accepted surface groups:
+-
+-```text
+-repository command surface:
+-  Makefile
+-
+-tool pinning:
+-  hack/tools.go
+-  hack/boilerplate.go.txt
+-
+-Go module baseline:
+-  go.mod
+-  go.sum
+-
+-API and deepcopy closure:
+-  api/v1alpha1/
+-
+-CRD generation closure:
+-  api/v1alpha1/
+-  config/crd/
+-
+-sample Custom Resource alignment:
+-  config/samples/
+-
+-GitHub Actions CI alignment:
+-  .github/workflows/
+-  Makefile
+-
+-operator bootstrap:
+-  cmd/operator/
+-
+-controller reconciliation compile closure:
+-  internal/controller/
+-  directly required internal package files
+-
+-status helper closure:
+-  internal/status/
+-
+-Kubernetes helper closure:
+-  internal/k8s/
+-
+-error and utility helper closure:
+-  internal/errors/
+-  internal/util/
+-
+-observability/runtime helper closure:
+-  internal/otel/
+-  internal/runtime/
+-
+-optional RBAC config closure:
+-  config/rbac/
+-
+-optional manager/default config closure:
+-  config/manager/
+-  config/default/
+-
+-final local verification closure:
+-  Makefile
+-  go.mod
+-  go.sum
+-  generated outputs already owned by earlier slices
+-```
+-
+-An objective that combines more than two major surface groups is invalid unless
+-the objective is the final verification closure and does not introduce new
+-runtime behavior.
++- Vault/Kafka/EDA/AWX are in scope
++- mandatory namespace enforcement exists
++- single-instance enforcement exists
++- ordered finalizer teardown exists
++- Flux needs to be forked
++- an upstream Flux contribution is required
++- ResourceSet can be bypassed by retaining the legacy workload reconciler
++- secret rotation is allowed during ordinary reconcile
++- failed migrations may be ignored
++- generated outputs are valid without reproducible generation
++- live-cluster access exists unless explicitly provided
++
++Planner output MUST NOT create broad objectives such as:
++
++- implement Flux integration
++- rewrite the operator
++- build the whole control plane
++- implement all components
++- add all manifests
++- fix reconciliation end to end
++
++## 13. Accepted Objective Surface Groups
++
++Useful bounded surface groups include:
++
++- API + generated CRD closure
++- Flux Go dependency baseline
++- bootstrap Secret package
++- ResourceSet rendering package
++- root controller adaptation
++- status projection
++- RBAC/manager/default manifests
++- samples
++- Make/tooling
++- CI alignment
++- unit/envtest coverage
++- final integration verification
++- legacy helper removal after replacement is proven
++
++An objective combining more than two major groups requires explicit coupling and
++must remain independently verifiable.
++
++## 14. Completion Definition
++
++The refactor is complete when:
++
++- `UnicopControlPlane` remains the public API
++- bootstrap Secret semantics match the runtime specification
++- one ResourceSet represents the managed control plane
++- ordered lifecycle is implemented through Flux stages
++- the adapter no longer directly applies/waits on workload resources
++- domain status is projected truthfully
++- generated artifacts are current
++- local tests/build pass
++- the lifecycle acceptance matrix has an executable verification path
++- obsolete custom generic reconciliation machinery is removed or demonstrably
++  unused
+ 
+ ---
+ 
+-END OF DOCUMENT
+\ No newline at end of file
++END OF DOCUMENT
+diff --git a/docs/specification.md b/docs/specification.md
+index 29edd17..e6c1463 100644
+--- a/docs/specification.md
++++ b/docs/specification.md
+@@ -7,570 +7,494 @@ authority: runtime-behavior
+ 
+ # UNICOP Control Plane Operator
+ 
+-## Complete Engineering Specification
++## Flux-Oriented Engineering Specification
+ 
+-SCOPE: Current accepted operator runtime behavior  
+-AUDIENCE: UNICOP engineers and platform operators  
+-DOCUMENT TYPE: Runtime behavior contract  
+-
+----
+-
+-## Navigation
+-
+-- [0. Document Contract](#0-document-contract)
+-- [1. Accepted Implementation Scope](#1-accepted-implementation-scope)
+-- [2. System Overview](#2-system-overview)
+-- [3. Operator Process Model](#3-operator-process-model)
+-- [4. Primary Control Resource](#4-primary-control-resource)
+-- [5. Custom Resource Schema Contract](#5-custom-resource-schema-contract)
+-- [6. Managed Resource Contract](#6-managed-resource-contract)
+-- [7. Reconciliation Semantics](#7-reconciliation-semantics)
+-- [8. Status Contract](#8-status-contract)
+-- [9. Failure Model](#9-failure-model)
+-- [10. Security and Secret Contract](#10-security-and-secret-contract)
+-- [11. Explicitly Out of Scope](#11-explicitly-out-of-scope)
+-- [12. End State](#12-end-state)
+-
+----
++SCOPE: Current accepted runtime behavior and target refactor architecture
++AUDIENCE: UNICOP engineers and platform operators
++DOCUMENT TYPE: Runtime behavior contract
+ 
+ ## 0. Document Contract
+ 
+-### 0.1 Authority
+-
+ This document is the authoritative runtime behavior specification for the
+-current accepted scope of the UNICOP Control Plane Operator.
+-
+-All accepted runtime behavior MUST be derivable from this document.
++current accepted UNICOP control-plane scope.
+ 
+ Behavior not specified here MUST NOT be treated as accepted implementation
+-scope.
+-
+-### 0.2 Change Rule
++scope. There are no undocumented defaults.
+ 
+-This document may change only through explicit reviewable patches.
++## 1. Accepted Scope
+ 
+-A change to runtime behavior requires:
++The accepted product manages one NetBox-backed control-plane foundation from a
++single `UnicopControlPlane` Custom Resource.
+ 
+-- documentation change in this file
+-- corresponding implementation change
+-- local verification of the affected behavior
++Managed functional components are:
++
++- bootstrap Secret for NetBox/PostgreSQL credentials
++- PostgreSQL Service and StatefulSet with persistent storage
++- Redis Service and Deployment
++- NetBox migrations Job
++- NetBox web Service and Deployment
++- NetBox worker Deployment
++- domain status for PostgreSQL, Redis, migrations, web, and worker
+ 
+-### 0.3 Completeness Rule
++Vault, Kafka, Ansible EDA, AWX, cloud IAM, external secret authorities, and an
++event backbone are outside the current accepted scope.
+ 
+-Every accepted runtime behavior, interface, schema field, managed resource,
+-status transition, and secret-handling rule must be specified.
++## 2. Target Runtime Architecture
+ 
+-There are no undocumented defaults.
+-
+----
++`UnicopControlPlane` remains the public product API.
+ 
+-## 1. Accepted Implementation Scope
++The accepted target architecture contains two cooperating reconciliation
++layers:
+ 
+-The current accepted implementation scope is a Kubernetes operator that manages
+-a NetBox-backed control-plane foundation.
++1. a thin UNICOP adapter controller
++2. Flux Operator `ResourceSet` reconciliation
+ 
+-The operator currently manages:
++The UNICOP adapter controller owns only behavior that is domain-specific or
++cannot be represented directly by Flux:
+ 
+-- one `UnicopControlPlane` Custom Resource
+-- one PostgreSQL instance for NetBox
+-- one Redis instance for NetBox cache and worker queues
+-- one NetBox migrations Job
+-- one NetBox web Deployment and Service
+-- one NetBox worker Deployment
+-- one Kubernetes Secret containing generated NetBox/Postgres bootstrap secrets
+-- status reporting for the managed components above
++- watch `UnicopControlPlane`
++- apply documented defaults that are not CRD-native
++- ensure bootstrap Secret generate-once semantics
++- create/update the corresponding Flux `ResourceSet`
++- project Flux/Kubernetes component state into `UnicopControlPlane.status`
++- expose visible errors when adaptation or status projection fails
+ 
+-The current accepted implementation scope does not include Vault, Kafka,
+-Ansible EDA, AWX, cloud IAM, external secret managers, or event-backbone
+-integration.
++Flux Operator owns generic lifecycle mechanics:
+ 
+-Those may be added only by extending this specification and the CRD schema.
++- ordered staged apply
++- health waiting and dependency gating
++- retry on later reconciliation
++- drift correction
++- object inventory
++- garbage collection
++- reconciliation conditions/events/history
+ 
+----
++The UNICOP implementation MUST NOT duplicate generic Flux reconciliation
++machinery unless a future canonical change documents a concrete unmet
++requirement.
+ 
+-## 2. System Overview
++## 3. Primary Control Resource
+ 
+-UNICOP Control Plane Operator is a Kubernetes operator implemented with Go and
+-controller-runtime.
++The public API remains:
+ 
+-The operator reconciles desired control-plane infrastructure from a single
+-Custom Resource.
++- apiVersion: `unicop.io/v1alpha1`
++- kind: `UnicopControlPlane`
++- CRD: `unicopcontrolplanes.unicop.io`
++- scope: Namespaced
++- status subresource: enabled
+ 
+-The operator installs machinery only.
++The intended control namespace is `unicop-platform`. Mandatory namespace
++enforcement remains out of scope until explicitly implemented.
+ 
+-It does not encode UNICOP business logic or domain intent.
++The intended deployment model is one `UnicopControlPlane` instance per cluster.
++Single-instance enforcement remains out of scope until explicitly implemented.
+ 
+----
++## 4. Custom Resource Schema Contract
+ 
+-## 3. Operator Process Model
++The accepted spec fields remain:
+ 
+-### 3.1 Runtime Form
++- `spec.images.netbox`
++- `spec.images.postgres`
++- `spec.images.redis`
++- `spec.postgres.database`
++- `spec.postgres.username`
++- `spec.postgres.storageSize`
++- `spec.postgres.storageClassName`
++- `spec.postgres.resources`
++- `spec.redis.resources`
++- `spec.netbox.port`
++- `spec.netbox.webReplicas`
++- `spec.netbox.workerReplicas`
++- `spec.netbox.webResources`
++- `spec.netbox.workerResources`
++- `spec.netbox.secretName`
++- `spec.netbox.migrationsCommand`
++- `spec.netbox.workerCommand`
+ 
+-The operator is:
++Required fields:
+ 
+-- a single long-running Go process
+-- running inside a Kubernetes Pod
+-- authenticated through a Kubernetes ServiceAccount
+-- communicating with the cluster through the Kubernetes API
+-- managed by controller-runtime
++- `spec.images.netbox`
++- `spec.images.postgres`
++- `spec.images.redis`
++- `spec.postgres.storageSize`
+ 
+-The operator may expose process-level flags for metrics, probes, and leader
+-election.
++Accepted defaults:
+ 
+-The operator does not expose an imperative lifecycle CLI for installing,
+-upgrading, or deleting the managed control plane.
++- `spec.postgres.database`: `netbox`
++- `spec.postgres.username`: `netbox`
++- `spec.netbox.port`: `8080`
++- `spec.netbox.webReplicas`: `1`
++- `spec.netbox.workerReplicas`: `1`
++- `spec.netbox.secretName`: `<metadata.name>-netbox-secrets`
++- `spec.netbox.migrationsCommand`: NetBox `manage.py migrate --no-input`
++- `spec.netbox.workerCommand`: NetBox `manage.py rqworker`
++
++The Go API types under `api/v1alpha1/` remain the source for generated CRD
++schema artifacts.
+ 
+-### 3.2 Trigger Source
++## 5. Flux Reconciliation Resource
+ 
+-The operator reacts to lifecycle events of one Custom Resource kind:
++Each `UnicopControlPlane` instance MUST map deterministically to one Flux
++`ResourceSet` in the same namespace unless a future canonical contract states
++otherwise.
+ 
+-```yaml
+-apiVersion: unicop.io/v1alpha1
+-kind: UnicopControlPlane
+-```
++The ResourceSet is an implementation resource, not the public product API.
++Users configure UNICOP through `UnicopControlPlane`, not by manually editing the
++materialized ResourceSet.
+ 
+-Owned child resource events may trigger reconciliation through
+-controller-runtime ownership watches.
++The ResourceSet MUST carry deterministic labels identifying:
+ 
+-No independent imperative trigger source is part of the accepted runtime model.
++- UNICOP ownership
++- parent instance name
++- parent instance UID when suitable for correlation
+ 
+-### 3.3 Namespace
++The adapter controller MUST ensure that the ResourceSet lifecycle follows the
++parent `UnicopControlPlane` lifecycle through Kubernetes ownership or an
++equivalent deterministic deletion mechanism.
+ 
+-The intended control namespace is:
++## 6. Staged Lifecycle Flow
+ 
+-```text
+-unicop-platform
+-```
++The accepted control-plane lifecycle is strict and ordered.
+ 
+-The current implementation may reconcile the resource in the namespace where
+-the Custom Resource exists.
++Stage 0 — bootstrap:
+ 
+-Enforcing a mandatory namespace is accepted behavior only after the controller
+-implements that validation or rejection path.
++- ensure the bootstrap Secret exists
++- ensure required keys are non-empty
++- preserve existing non-empty values
++- do not enter PostgreSQL stage until bootstrap is valid
+ 
+-### 3.4 Single-Instance Rule
++Stage 1 — PostgreSQL:
+ 
+-The intended model is one `UnicopControlPlane` instance per cluster.
++- apply PostgreSQL Service and StatefulSet
++- wait for PostgreSQL readiness
++- Redis resources MUST NOT advance while PostgreSQL is not ready
+ 
+-The single-instance rule is accepted behavior only after the controller
+-implements enforcement.
++Stage 2 — Redis:
+ 
+-Until then, planner output must not assume single-instance enforcement exists.
++- apply Redis Service and Deployment
++- wait for Redis readiness
++- migrations MUST NOT advance while Redis is not ready
+ 
+----
++Stage 3 — migrations:
+ 
+-## 4. Primary Control Resource
++- apply one NetBox migrations Job
++- wait for successful Job completion
++- NetBox web and worker MUST NOT advance until migrations succeed
+ 
+-### 4.1 Identity
++Stage 4 — web:
+ 
+-Resource identity:
++- apply NetBox web Service and Deployment
++- wait for web readiness
++- worker MUST NOT advance until web is ready
+ 
+-```yaml
+-apiVersion: unicop.io/v1alpha1
+-kind: UnicopControlPlane
+-```
++Stage 5 — worker:
+ 
+-CRD identity:
++- apply NetBox worker Deployment
++- wait for worker readiness
+ 
+-```text
+-unicopcontrolplanes.unicop.io
+-```
++End state:
+ 
+-CRD scope:
++- every accepted stage is healthy
++- `status.phase = Ready`
++- every accepted component reports `state = Ready`
+ 
+-```text
+-Namespaced
+-```
++The implementation SHOULD express Stages 1 through 5 as ordered
++`ResourceSet.steps` rather than custom controller wait loops.
+ 
+-Version:
++## 7. Managed Resource Contract
+ 
+-```text
+-v1alpha1
+-```
++### 7.1 Bootstrap Secret
+ 
+-Status subresource:
++Default Secret name is `<metadata.name>-netbox-secrets` unless
++`spec.netbox.secretName` overrides it.
+ 
+-```text
+-enabled
+-```
++Required keys are:
+ 
+-### 4.2 Ownership
++- `db_password`
++- `secret_key`
+ 
+-The operator owns Kubernetes resources it creates for a
+-`UnicopControlPlane` instance.
++Generate-once semantics are mandatory:
+ 
+-Owned resources MUST have controller ownership set to the parent
+-`UnicopControlPlane` where Kubernetes owner references are valid.
++- if the Secret does not exist, create it with both required non-empty values
++- if one required key is missing or empty, generate only that missing value
++- if a required key already contains a non-empty value, preserve it byte-for-byte
++- reconciliation MUST NOT rotate a valid existing value merely because the
++  controller or Flux reconciles again
++- Secret values MUST NOT be rendered into status, events, logs, or ResourceSet
++  labels/annotations
+ 
+-Managed resources MUST carry deterministic labels identifying:
++The bootstrap Secret may be managed directly by the adapter controller because
++its preserve-existing random-value semantics are intentionally stateful.
+ 
+-- operator ownership
+-- parent instance
+-- component role
++### 7.2 PostgreSQL
+ 
+----
++Managed objects:
+ 
+-## 5. Custom Resource Schema Contract
++- Service
++- StatefulSet
++- PersistentVolumeClaim through StatefulSet volume claim templates
+ 
+-The Go API types under `api/v1alpha1/` are the source for generated Kubernetes
+-schema artifacts.
++Service port is `5432`.
+ 
+-The generated CRD under `config/crd/` must match the Go API types after
+-generation.
+-
+-### 5.1 Spec Fields
+-
+-The accepted spec contains:
+-
+-```text
+-spec.images.netbox
+-spec.images.postgres
+-spec.images.redis
+-spec.postgres.database
+-spec.postgres.username
+-spec.postgres.storageSize
+-spec.postgres.storageClassName
+-spec.postgres.resources
+-spec.redis.resources
+-spec.netbox.port
+-spec.netbox.webReplicas
+-spec.netbox.workerReplicas
+-spec.netbox.webResources
+-spec.netbox.workerResources
+-spec.netbox.secretName
+-spec.netbox.migrationsCommand
+-spec.netbox.workerCommand
+-```
+-
+-### 5.2 Required Spec Fields
+-
+-The following fields are required for accepted operation:
+-
+-```text
+-spec.images.netbox
+-spec.images.postgres
+-spec.images.redis
+-spec.postgres.storageSize
+-```
+-
+-### 5.3 Defaults
+-
+-The following defaults are accepted behavior:
+-
+-```text
+-spec.postgres.database: netbox
+-spec.postgres.username: netbox
+-spec.netbox.port: 8080
+-spec.netbox.webReplicas: 1
+-spec.netbox.workerReplicas: 1
+-spec.netbox.secretName: <metadata.name>-netbox-secrets
+-spec.netbox.migrationsCommand: ["/bin/bash", "-c", "/opt/netbox/netbox/manage.py migrate --no-input"]
+-spec.netbox.workerCommand: ["/bin/bash", "-c", "/opt/netbox/netbox/manage.py rqworker"]
+-```
+-
+-Defaults must be documented before being relied on by tests or planner output.
+-
+-### 5.4 Status Fields
+-
+-The accepted status contains:
+-
+-```text
+-status.phase
+-status.components
+-status.components.<component>.state
+-status.components.<component>.reason
+-```
+-
+-Accepted component state values:
+-
+-```text
+-Progressing
+-Ready
+-Blocked
+-Error
+-```
+-
+-Accepted top-level phase values:
+-
+-```text
+-Progressing
+-Ready
+-Error
+-```
++PostgreSQL is ready when the StatefulSet reports at least one ready replica.
+ 
+----
++### 7.3 Redis
+ 
+-## 6. Managed Resource Contract
++Managed objects:
+ 
+-### 6.1 Secret
++- Service
++- Deployment
+ 
+-The operator manages one bootstrap Secret for NetBox and Postgres credentials.
++Service port is `6379`.
+ 
+-Default name:
++Redis is ready when the Deployment reports at least one ready replica.
+ 
+-```text
+-<metadata.name>-netbox-secrets
+-```
++### 7.4 NetBox Migrations
+ 
+-If `spec.netbox.secretName` is set, that value is used.
++Managed object:
+ 
+-Required keys:
++- Job
+ 
+-```text
+-db_password
+-secret_key
+-```
++Migrations are ready only after the Job reports at least one success.
+ 
+-The operator may generate missing values.
++A failed migrations Job MUST block all later stages.
+ 
+-The operator MUST NOT overwrite existing non-empty values for these keys.
++For a retryable failed migration, the materialized Flux configuration MUST allow
++the failed Job to be recreated on a later reconciliation after desired inputs
++change or the retry condition is otherwise made valid. The implementation MUST
++NOT report success while the failed Job remains the effective result.
+ 
+-### 6.2 PostgreSQL
++### 7.5 NetBox Web
+ 
+-The operator manages PostgreSQL using:
++Managed objects:
+ 
+-- `Service`
+-- `StatefulSet`
+-- `PersistentVolumeClaim` through `volumeClaimTemplates`
++- Service
++- Deployment
+ 
+-The PostgreSQL Service exposes port:
++Service port is `80`. Container port is `spec.netbox.port`.
+ 
+-```text
+-5432
+-```
++Web is ready according to Kubernetes Deployment readiness.
+ 
+-Readiness is based on Kubernetes readiness signals from the StatefulSet.
++### 7.6 NetBox Worker
+ 
+-PostgreSQL is considered ready when at least one replica is ready.
++Managed object:
+ 
+-### 6.3 Redis
++- Deployment
+ 
+-The operator manages Redis using:
++Worker is ready according to Kubernetes Deployment readiness.
+ 
+-- `Service`
+-- `Deployment`
++## 8. State Model
+ 
+-The Redis Service exposes port:
++Accepted component keys are:
+ 
+-```text
+-6379
+-```
++- `postgres`
++- `redis`
++- `migrations`
++- `web`
++- `worker`
+ 
+-Readiness is based on Kubernetes readiness signals from the Deployment.
++Accepted component states are:
+ 
+-Redis is considered ready when at least one replica is ready.
++- `Progressing`
++- `Ready`
++- `Blocked`
++- `Error`
+ 
+-### 6.4 NetBox Migrations
++Accepted top-level phases are:
+ 
+-The operator manages one migrations Job.
++- `Progressing`
++- `Ready`
++- `Error`
+ 
+-The migrations Job must run before NetBox web and worker Deployments are
+-treated as ready.
++Component semantics:
+ 
+-Migrations are considered complete when the Job reports at least one success.
++`Progressing` means the component is the current active stage and its desired
++resources are being applied or are waiting for readiness.
+ 
+-If the Job reports failure and no success, migrations are considered failed.
++`Ready` means the component readiness predicate is satisfied.
+ 
+-### 6.5 NetBox Web
++`Blocked` means the component has not been allowed to advance because an
++earlier dependency is not Ready. A blocked component is not itself considered
++failed.
+ 
+-The operator manages NetBox web using:
++`Error` means the component or the adaptation required to manage it has an
++externally visible failure that prevents successful progression.
+ 
+-- `Service`
+-- `Deployment`
++Top-level semantics:
+ 
+-The web Service exposes port:
++- `Progressing`: no terminal error exists and at least one required component is
++  not Ready
++- `Ready`: all required components are Ready
++- `Error`: a current externally visible failure prevents progression
+ 
+-```text
+-80
+-```
++`Error` is not necessarily permanent. If the underlying failure is corrected,
++a later reconciliation MUST be able to return the component to `Progressing`
++and eventually `Ready` without recreating the parent Custom Resource.
+ 
+-The web container port is controlled by:
++## 9. Status Projection
+ 
+-```text
+-spec.netbox.port
+-```
++`status.phase` is the domain lifecycle state.
+ 
+-NetBox web readiness is based on Kubernetes readiness signals from the
+-Deployment.
++`status.components.<component>` contains at least:
+ 
+-### 6.6 NetBox Worker
++- `state`
++- `reason`
+ 
+-The operator manages NetBox worker using:
++The adapter controller MUST derive status from observed Kubernetes/Flux state;
++it MUST NOT maintain an independent hidden phase engine.
+ 
+-- `Deployment`
++When a stage is active:
+ 
+-NetBox worker readiness is based on Kubernetes readiness signals from the
+-Deployment.
++- earlier successful components are `Ready`
++- the current component is `Progressing` or `Error`
++- later components are `Blocked`
+ 
+----
++When a dependency is not ready but has no error, top-level phase is
++`Progressing`.
+ 
+-## 7. Reconciliation Semantics
++When a current stage has an externally visible error, top-level phase is
++`Error` until observation shows recovery.
+ 
+-The controller reconciles the `UnicopControlPlane` resource and its owned child
+-resources.
++No status update may report `Ready` while any required component is not Ready.
+ 
+-Accepted reconciliation order:
+-
+-1. ensure bootstrap Secret
+-2. ensure PostgreSQL Service
+-3. ensure PostgreSQL StatefulSet
+-4. wait for PostgreSQL readiness
+-5. ensure Redis Service
+-6. ensure Redis Deployment
+-7. wait for Redis readiness
+-8. ensure NetBox migrations Job
+-9. wait for migrations success
+-10. ensure NetBox web Service
+-11. ensure NetBox web Deployment
+-12. wait for NetBox web readiness
+-13. ensure NetBox worker Deployment
+-14. wait for NetBox worker readiness
+-15. set status phase to `Ready`
+-
+-The controller must stop at the first blocking dependency that is not ready and
+-record status before requeueing.
+-
+-The controller must return visible errors for failed Kubernetes API operations.
++## 10. Reconciliation and Recovery Semantics
+ 
+----
++Reconciliation is level-based, not an imperative one-shot installation.
+ 
+-## 8. Status Contract
++Required behavior:
+ 
+-`status.phase` is the top-level lifecycle state.
++- repeated reconciliation of unchanged desired state is idempotent
++- manual drift of Flux-managed objects is corrected by Flux reconciliation
++- a controller or Flux restart does not lose desired state
++- transient not-ready states do not skip dependency gates
++- recovery of a failed dependency allows later reconciliation to continue
++- Kubernetes API failures remain externally visible
++- unrelated Kubernetes resources are never mutated
+ 
+-`status.components` records per-component state.
++The adapter controller MUST NOT implement sleep/poll loops for Flux-managed
++workloads. It should observe ResourceSet/Kubernetes status and requeue through
++normal controller-runtime reconciliation.
+ 
+-Accepted component keys:
++## 11. Ownership, Inventory, and Deletion
+ 
+-```text
+-postgres
+-redis
+-migrations
+-web
+-worker
+-```
++Accepted ownership hierarchy is:
+ 
+-Status MUST be updated when reconciliation is blocked by a dependency that is
+-not ready.
+-
+-Status MUST be updated when a managed resource operation fails.
++`UnicopControlPlane` → implementation ResourceSet → Flux-managed workload
++resources.
+ 
+-The top-level phase MUST be:
++The bootstrap Secret may be directly owned by `UnicopControlPlane`.
+ 
+-- `Progressing` while dependencies or workloads are not ready
+-- `Ready` only after all accepted managed components are ready
+-- `Error` when reconciliation reaches a terminal or externally visible failure
++Flux inventory/garbage collection is the authoritative mechanism for resources
++materialized by the ResourceSet.
+ 
+-No successful end state may be reported while any accepted component is not
+-ready.
++Deleting the parent MUST eventually remove the ResourceSet and Flux-managed
++non-persistent workload resources according to normal Kubernetes/Flux deletion
++semantics.
+ 
+----
++Ordered domain-specific teardown is not accepted behavior in the current scope.
++Persistent-volume retention/deletion follows the Kubernetes storage semantics
++of the materialized StatefulSet/PVC configuration and MUST NOT be silently
++invented by controller code.
+ 
+-## 9. Failure Model
++## 12. Failure Model
+ 
+-The operator must fail visibly.
++The implementation must fail visibly.
+ 
+-Accepted failure rules:
++Required rules:
+ 
+ - no silent failures
+-- no hidden retries without status visibility
+-- no success status after partial installation
+-- no mutation of unrelated Kubernetes resources
+-- no assumption that child resources are ready immediately after creation
+-- no status transition to `Ready` unless all accepted readiness gates pass
++- no success after partial installation
++- no readiness assumption immediately after object creation
++- no bypass of an earlier failed/not-ready stage
++- no hidden secret mutation
++- no mutation of unrelated objects
+ 
+-Transient not-ready states should produce `Progressing` status and requeue.
++A failed stage blocks all later stages.
+ 
+-Kubernetes API errors should be returned unless explicitly handled.
++A later reconciliation after the failure is corrected MUST be capable of
++progressing the same `UnicopControlPlane` instance.
+ 
+----
++## 13. Flux Runtime Dependency
+ 
+-## 10. Security and Secret Contract
++Flux Operator and the Flux APIs required by the materialized ResourceSet are
++runtime prerequisites for this implementation.
+ 
+-The current accepted implementation uses Kubernetes Secrets for bootstrap
+-credentials.
++The UNICOP repository may provide installation manifests or dependency
++verification for those prerequisites, but it MUST NOT vendor or reimplement the
++Flux reconciliation engine.
+ 
+-The operator may generate bootstrap secret values for:
++Failure to find required Flux CRDs/controllers MUST surface as an explicit
++operator error/condition rather than silently falling back to the legacy custom
++reconciliation engine.
+ 
+-```text
+-db_password
+-secret_key
+-```
++No upstream Flux modification is a prerequisite for the first accepted
++implementation. A future upstream contribution may be proposed only after the
++working public-API implementation demonstrates a concrete reusable capability
++gap.
+ 
+-Secret values MUST NOT be logged.
++## 14. Security Contract
+ 
+-Secret values MUST NOT be copied into status.
++Secret values MUST NOT be logged, emitted in events, stored in status, or
++included in Flux metadata.
+ 
+ NetBox receives secret values through Kubernetes Secret references.
+ 
+-Workers MUST NOT receive direct database access except through the documented
+-NetBox runtime environment required by the current accepted worker deployment.
+-
+-Vault is not part of current accepted scope.
++Vault and external IAM are outside current scope.
+ 
+-External IAM is not part of current accepted scope.
++The adapter controller and Flux runtime MUST use least-privilege Kubernetes
++RBAC appropriate to the objects they own.
+ 
+----
+-
+-## 11. Explicitly Out of Scope
++## 15. Explicitly Out of Scope
+ 
+-The following are not accepted runtime behavior in the current scope:
++Current scope excludes:
+ 
+-- Vault initialization, unseal, policy setup, or snapshot restore
+-- Kafka broker installation
+-- Kafka topic management
+-- NetBox-to-Kafka event publication
+-- Ansible EDA installation
+-- AWX installation
+-- EDA-to-AWX wiring
++- Vault initialization/unseal/policies/snapshot restore
++- Kafka broker/topic/event publication
++- Ansible EDA
++- AWX
+ - cloud IAM
+ - external Security-IaC integration
+-- production-grade secret authority
+-- multi-instance cluster enforcement unless implemented
+-- mandatory namespace rejection unless implemented
+-- finalizer-driven ordered teardown unless implemented
+-- upgrade orchestration beyond normal reconciliation of current managed objects
+-
+-Planner output MUST NOT create execution objectives for these items unless the
+-request explicitly asks to extend scope and the corresponding CRD/schema work
+-is included.
+-
+----
+-
+-## 12. End State
+-
+-The current accepted end state is reached when:
+-
+-```text
+-status.phase = Ready
+-```
+-
+-and all accepted components report:
+-
+-```text
+-state = Ready
+-```
+-
+-Required ready components:
+-
+-```text
+-postgres
+-redis
+-migrations
+-web
+-worker
+-```
+-
+-At end state:
+-
+-- PostgreSQL is created and ready
+-- Redis is created and ready
+-- NetBox migrations have completed
+-- NetBox web is created and ready
+-- NetBox worker is created and ready
+-- bootstrap Secret exists with required keys
+-- status truthfully reports readiness
++- production external secret authority
++- mandatory namespace enforcement
++- cluster-wide single-instance enforcement
++- finalizer-driven ordered teardown
++- application-aware rollback beyond normal reconciliation
++- custom generic phase/apply/wait/retry/GC engines
++- mandatory modification or fork of Flux/Flux Operator
++
++## 16. Acceptance Lifecycle Matrix
++
++The implementation is not complete merely because a cold install succeeds.
++The accepted lifecycle must be verifiable for:
++
++- cold install through Ready
++- second reconcile with unchanged desired state
++- manual drift correction of Flux-managed resources
++- PostgreSQL not-ready then recovery
++- Redis not-ready then recovery
++- migrations failure with downstream stages blocked
++- migrations recovery/retry after correction
++- controller restart during progression
++- Flux reconciliation restart during progression
++- spec update changing supported workload inputs
++- bootstrap Secret preservation across repeated reconciliation
++- partial bootstrap Secret completion without rotating valid keys
++- parent deletion and ResourceSet cleanup
++- truthful status projection throughout the cases above
++
++## 17. End State
++
++The accepted end state is reached only when:
++
++- bootstrap Secret exists with both required non-empty keys
++- PostgreSQL is Ready
++- Redis is Ready
++- migrations are successful
++- NetBox web is Ready
++- NetBox worker is Ready
++- `status.phase = Ready`
++- every accepted component reports `state = Ready`
+ 
+ ---
+ 
+-END OF DOCUMENT
+\ No newline at end of file
++END OF DOCUMENT

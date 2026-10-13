@@ -39,8 +39,14 @@ spec:
                   key: admin-password
             - name: GF_USERS_ALLOW_SIGN_UP
               value: "false"
+            - name: OMNIROUTE_GRAFANA_READ_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: omniroute-grafana-readonly
+                  key: token
+                  optional: true
             - name: GF_PLUGINS_PREINSTALL
-              value: victoriametrics-logs-datasource@0.31.0
+              value: victoriametrics-logs-datasource@0.31.0,yesoreyeram-infinity-datasource@3.7.1
           readinessProbe:
             httpGet:
               path: /api/health
@@ -89,7 +95,7 @@ spec:
             - name: FOLDER
               value: /etc/grafana/provisioning/datasources
             - name: NAMESPACE
-              value: host-runtime,rr,ms
+              value: host-runtime,rr,ms,llm-runtime
             - name: REQ_URL
               value: http://127.0.0.1:3000/api/admin/provisioning/datasources/reload
             - name: REQ_METHOD
@@ -122,7 +128,7 @@ spec:
             - name: FOLDER
               value: /var/lib/grafana/dashboards
             - name: NAMESPACE
-              value: observability-console,host-runtime,rr,ms
+              value: observability-console,host-runtime,rr,ms,llm-runtime
             - name: REQ_URL
               value: http://127.0.0.1:3000/api/admin/provisioning/dashboards/reload
             - name: REQ_METHOD

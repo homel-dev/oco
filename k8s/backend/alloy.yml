@@ -121,7 +121,7 @@ data:
       // the central Alloy ingress and must not also be tailed here.
       rule {
         source_labels = ["__meta_kubernetes_namespace"]
-        regex         = "^(ms|llm-runtime)$"
+        regex         = "^(ms|llm-runtime|host-runtime|rr)$"
         action        = "drop"
       }
 
