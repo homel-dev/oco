@@ -44,7 +44,7 @@ spec:
                 secretKeyRef:
                   name: omniroute-grafana-readonly
                   key: token
-                  optional: true
+                  optional: false
             - name: GF_PLUGINS_PREINSTALL
               value: victoriametrics-logs-datasource@0.32.0,yesoreyeram-infinity-datasource@4.1.1,marcusolsson-gantt-panel@0.8.1
           readinessProbe:
