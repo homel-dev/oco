@@ -25,7 +25,7 @@ spec:
         fsGroup: 472
       containers:
         - name: grafana
-          image: grafana/grafana:11.4.0   # placeholder — pin to a current verified release
+          image: grafana/grafana:13.2.4
           ports:
             - name: http
               containerPort: 3000
@@ -46,7 +46,7 @@ spec:
                   key: token
                   optional: true
             - name: GF_PLUGINS_PREINSTALL
-              value: victoriametrics-logs-datasource@0.31.0,yesoreyeram-infinity-datasource@3.7.1
+              value: victoriametrics-logs-datasource@0.32.0,yesoreyeram-infinity-datasource@4.1.1,marcusolsson-gantt-panel@0.8.1
           readinessProbe:
             httpGet:
               path: /api/health

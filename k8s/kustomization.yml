@@ -8,7 +8,6 @@ resources:
   - namespace.yml
   - serviceaccount.yml
   - grafana/rbac.yml
-  - grafana/secret.yml
   - grafana/configmap-dashboard-provider.yml
   - grafana/configmap-oco-dashboard.yml
   - grafana/configmap-ai-runtime-dashboard.yml
