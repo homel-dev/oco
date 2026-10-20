@@ -79,8 +79,8 @@ spec:
               cpu: 100m
               memory: 256Mi
             limits:
-              cpu: "1"
-              memory: 512Mi
+              cpu: "2"
+              memory: 1Gi
         - name: sidecar-datasources
           image: kiwigrid/k8s-sidecar:1.28.0   # placeholder — verify current tag
           env:
